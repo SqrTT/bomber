@@ -4,11 +4,12 @@
   "description": "Registration:\r - on page http://server/codenjoy-contest/help\r     + you can read game instructions\r         * server = server_host_ip:8080 server ip inside your LAN\r         * server = codenjoy.com if you play on http://codenjoy.com/codenjoy-contest\r - register your hero on server http://server/codenjoy-contest/register\r - copy board page browser url from address bar and paste into url variable of Runner.js\r - write your own bot at 'get' function",
   "main": "Runner.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "mocha": "^8.0.1",
     "ws": "^7.3.0"
   }
 }
