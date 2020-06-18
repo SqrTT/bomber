@@ -61,13 +61,58 @@ exports.bonuses = {
 
 const bombers = [
     Element.BOMB_BOMBERMAN,
+    Element.BOMBERMAN
+]
+exports.isBomber = (char) => bombers.includes(char);
+
+const otherBombers = [
+    Element.BOMB_BOMBERMAN,
     Element.BOMBERMAN,
     Element.OTHER_BOMB_BOMBERMAN,
     Element.OTHER_BOMBERMAN
 ]
-exports.isBomber = (char) {
-    return bombers.includes(char);
+exports.isOtherBomber = (char) => otherBombers.includes(char);
+
+exports.settings = {
+    'boardSize': 23,
+    'bombPower': 3,
+    'bombsCount': 1,
+    'destroyWallCount': 52,
+    'diePenalty': 2,
+    'isMultiple': true,
+    'killMeatChopperScore': 3,
+    'killOtherHeroScore': 10,
+    'killWallScore': 1,
+    'meatChoppersCount': 5,
+    'perkBombBlastRadiusInc': 2,
+    'perkBombCountInc': 3,
+    'perkDropRatio': 20,
+    'perkPickTimeout': 5,
+    'playersPerRoom': 5,
+    'remoteControlCount': 3,
+    'roundSettings': {
+        'minTicksForWin': 1,
+        'roundsEnabled': false,
+        'roundsPerMatch': 1,
+        'timeBeforeStart': 5,
+        'timeForWinner': 1,
+        'timePerRound': 300
+    },
+    'timeoutBombBlastRadiusInc': 10,
+    'timeoutBombCountInc': 10,
+    'timeoutBombImmune': 10,
+    'winRoundScore': 15
 }
+
+const bombs = [
+    Element.BOMB_TIMER_1,
+    Element.BOMB_TIMER_2,
+    Element.BOMB_TIMER_3,
+    Element.BOMB_TIMER_4,
+    Element.BOMB_TIMER_5
+];
+
+exports.isBomb = (char) => bombs.includes(char);
 
 class Dir {
     constructor(index, dx, dy, name) {
@@ -104,12 +149,12 @@ class Dir {
 }
 
 exports.Direction = {
-    UP: new Dir(2, 0, 1, 'up'),                 // you can move
-    DOWN: new Dir(3, 0, -1, 'down'),
-    LEFT: new Dir(0, -1, 0, 'left'),
-    RIGHT: new Dir(1, 1, 0, 'right'),
-    ACT: new Dir(4, 0, 0, 'act'),                // drop bomb
-    STOP: new Dir(5, 0, 0, '')                   // stay
+    UP: new Dir(2, 0, 1, 'UP'),                 // you can move
+    DOWN: new Dir(3, 0, -1, 'DOWN'),
+    LEFT: new Dir(0, -1, 0, 'LEFT'),
+    RIGHT: new Dir(1, 1, 0, 'RIGHT'),
+    ACT: new Dir(4, 0, 0, 'ACT'),                // drop bomb
+    STOP: new Dir(5, 0, 0, 'STOP')                   // stay
 };
 
 const nonWalkableElements = [

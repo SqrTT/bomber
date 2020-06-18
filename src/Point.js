@@ -5,7 +5,11 @@ class Point {
         this.y = y;
     }
     equals(o) {
-        return o.getX() == this.x && o.getY() == this.y;
+        return o.x === this.x && o.y === this.y;
+    }
+
+    equalsTo(x, y) {
+        return x === this.x && y === this.y;
     }
 
     toString() {
