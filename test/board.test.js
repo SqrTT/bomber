@@ -1,5 +1,15 @@
 var assert = require('assert');
 const { Board } = require('../src/Board');
+const { GameState } = require('../src/GameState');
+
+
+
+function getBoard(boardStr) {
+    const state = new GameState();
+    state.initBoard(boardStr);
+    return new Board(state);
+}
+
 describe('Board', function () {
     const board = (`
 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
@@ -26,24 +36,13 @@ describe('Board', function () {
 ☼#                    ☼
 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n/ig, '');
 
-    const boardInstance = new Board(board);
+    const boardInstance = getBoard(board);
     it('should create board', function () {
         assert.notEqual(boardInstance, null);
-    });
-
-    it('should contain actors', function () {
-        const activeActors = boardInstance.getActiveActors();
-        assert.equal(activeActors.length, 6);
     });
 
     it('should have a hero', function () {
         const hero = boardInstance.getHero();
         assert.notEqual(hero, undefined);
     });
-
-    it('should return element of board', function () {
-        const hero = boardInstance.getElementAt(2, 17);
-        assert.equal(hero, '☺');
-    });
-
 });

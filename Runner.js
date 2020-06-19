@@ -3,7 +3,7 @@
 var util = require('util');
 var WSocket = require('ws');
 const { Worker } = require('worker_threads');
-const { Element, isWalkableElement} = require("./src/Constants");
+const { Element, isWalkableElement } = require("./src/Constants");
 
 const { GameState } = require("./src/GameState");
 const { GameStates, GameStatesStr } = require("./src/GameStates");
@@ -17,6 +17,28 @@ const workers = [
     new Worker('./src/worker.js'),
     new Worker('./src/worker.js')
 ];
+
+var wss;
+const wsClients = [];
+if (!process.argv.includes('bot')) {
+    wss = new WSocket.Server({
+        port: process.env.SOCK_PORT || 33333
+    });
+    /**
+     * @type {WSocket[]}
+     */
+    wss.on('connection', function connection(ws) {
+        wsClients.push(ws);
+    });
+}
+
+function sendToClients(data) {
+    wsClients.forEach(client => {
+        if (client.readyState === WSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
 
 workers.forEach(worker => {
     worker.on('error', (err) => {
@@ -122,7 +144,6 @@ async function processBoard(boardString) {
                 board: boardString,
                 gameState,
                 tick: gameState.getTick(),
-                bombDistance: 3,
                 action
             })
             return pr;
@@ -135,14 +156,26 @@ async function processBoard(boardString) {
 
         scores = result;
 
+        sendToClients({
+            answer,
+            bestScore,
+            boardString,
+            gameState
+        });
+
     } else {
         answer = 'STOP';
+        sendToClients({
+            answer,
+            boardString,
+            gameState
+        });
     }
 
     var logMessage = boardAsString(boardString, boardSize) + "\n\n";
 
     logMessage += "Answer: " + answer + `: ${GameStatesStr[gameState.getState()]} : ${gameState.getTick()}\n`;
-    logMessage += `bombs: ${gameState.hero.bombsCount} - ${JSON.stringify(scores)}\n`;
+    logMessage += `bombs: ${gameState.hero && gameState.hero.bombsCount} - ${JSON.stringify(scores)}\n`;
     logMessage += "-----------------------------------\n";
 
     log(logMessage);

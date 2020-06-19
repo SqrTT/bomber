@@ -41,10 +41,7 @@ class GameState {
 
         this.walls = this.findAll(Element.WALL);
         this.destroyableWalls = this.findAll(Element.DESTROYABLE_WALL);
-        /**
-         * @type {Bomb[]}
-         */
-        this.bombs = [];
+
         this.blasts = [];
         this.destroyedWalls = [];
         this.destroyedBombs = [];
@@ -73,6 +70,41 @@ class GameState {
             [Element.BOMB_REMOTE_CONTROL]: this.findAll(Element.BOMB_REMOTE_CONTROL),
             [Element.BOMB_BLAST_RADIUS_INCREASE]: this.findAll(Element.BOMB_BLAST_RADIUS_INCREASE)
         };
+        const self = this;
+        /**
+         *
+         * @param {Point} bombPoint
+         */
+        function makeBomb(bombPoint) {
+            const element = self.getAt(bombPoint.x, bombPoint.y);
+
+            if (element === Element.BOMB_BOMBERMAN) {
+                return new Bomb(-1, bombPoint.x, bombPoint.y, self.hero.bombsPower, 5);
+            } else if (element === Element.OTHER_BOMB_BOMBERMAN) {
+                const bomb = new Bomb(-1, bombPoint.x, bombPoint.y, 3, 5);
+                const playerIdx = self.players.findIndex(pl => pl.equals(bombPoint));
+
+                if (playerIdx > -1) {
+                    bomb.owner = playerIdx;
+                    bomb.power = self.players[playerIdx].bombsPower;
+                }
+                return bomb;
+            } else {
+                return new Bomb(undefined, bombPoint.x, bombPoint.y, 3, 5);
+            }
+        }
+        /**
+         * @type {Bomb[]}
+         */
+        this.bombs = ([].concat(
+            this.findAll(Element.BOMB_TIMER_1).map(makeBomb),
+            this.findAll(Element.BOMB_TIMER_2).map(makeBomb),
+            this.findAll(Element.BOMB_TIMER_3).map(makeBomb),
+            this.findAll(Element.BOMB_TIMER_4).map(makeBomb),
+            this.findAll(Element.BOMB_TIMER_5).map(makeBomb),
+            this.findAll(Element.BOMB_BOMBERMAN).map(makeBomb),
+            this.findAll(Element.OTHER_BOMB_BOMBERMAN).map(makeBomb)
+        ));
     }
 
     getBoardPos(x, y) {

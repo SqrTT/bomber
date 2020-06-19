@@ -1,6 +1,14 @@
 const assert = require('assert');
 const { Board } = require('../src/Board');
 const { calc } = require('../src/calculateScore');
+const { GameState } = require('../src/GameState');
+
+
+function getBoard(boardStr) {
+    const state = new GameState();
+    state.initBoard(boardStr);
+    return new Board(state);
+}
 
 describe('score calc', function () {
     const board = (`
@@ -31,9 +39,8 @@ describe('score calc', function () {
 
     it('should create board', function () {
         const res = calc({
-            board,
-            action: 'LEFT',
-            bombsCount: 0
+            gameState: getBoard(board),
+            action: 'LEFT'
         })
 
         assert.equal(res, 8);
@@ -41,9 +48,8 @@ describe('score calc', function () {
 
     it('should see walls amount', function () {
         const res = calc({
-            board,
-            action: 'RIGHT',
-            bombsCount: 0
+            gameState: getBoard(board),
+            action: 'RIGHT'
         })
 
         assert.equal(res, 10);
@@ -76,15 +82,14 @@ describe('score calc', function () {
 
     it('should see bombs amount', function () {
         const res = calc({
-            board: bombBoard,
-            action: 'LEFT',
-            bombsCount: 0
+            gameState: getBoard(bombBoard),
+            action: 'LEFT'
         })
 
         assert(res < 0, 'avoid bomb');
 
         const res2 = calc({
-            board: bombBoard,
+            gameState: getBoard(bombBoard),
             action: 'RIGHT',
             bombsCount: 0
         })
@@ -120,9 +125,8 @@ describe('score calc', function () {
 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n/ig, '');
 
         const res = calc({
-            board: bombBoard,
-            action: 'STOP',
-            bombsCount: 0
+            gameState: getBoard(bombBoard),
+            action: 'STOP'
         })
 
         assert.ok(res < -0);
@@ -156,13 +160,12 @@ describe('score calc', function () {
 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n/ig, '');
 
         const res = calc({
-            board: bombBoard,
+            gameState: getBoard(bombBoard),
             action: 'STOP',
             bombsCount: 0
         })
 
         assert.ok(res < 0);
-
     });
 
     it('should way bombs 2', function () {
@@ -192,9 +195,8 @@ describe('score calc', function () {
                 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
 
         const res = calc({
-            board: bombBoard,
-            action: 'RIGHT',
-            bombsCount: 0
+            gameState: getBoard(bombBoard),
+            action: 'RIGHT'
         })
 
         assert.ok(res < 0);
@@ -228,9 +230,8 @@ describe('score calc', function () {
         ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
 
         const res = calc({
-            board: bombBoard,
-            action: 'DOWN',
-            bombsCount: 0
+            gameState: getBoard(bombBoard),
+            action: 'DOWN'
         })
 
         assert.ok(res < 0);

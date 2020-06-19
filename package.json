@@ -6,7 +6,8 @@
   "scripts": {
     "test": "mocha",
     "live": "node -r dotenv/config ./Runner.js",
-    "start": "node ./Runner.js"
+    "start": "node ./Runner.js",
+    "bot": "node ./Runner.js bot"
   },
   "author": "",
   "license": "ISC",
