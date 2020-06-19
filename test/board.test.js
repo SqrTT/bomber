@@ -13,7 +13,7 @@ function getBoard(boardStr) {
 describe('Board', function () {
     const board = (`
 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
-☼        & &          ☼
+☼        &            ☼
 ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼#☼#☼
 ☼   ##  # # ##     # #☼
 ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
@@ -21,12 +21,12 @@ describe('Board', function () {
 ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
 ☼# # ##     #    ##   ☼
 ☼ ☼ ☼#☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼
-☼  c  #       #      &☼
+☼  c  #       #       ☼
 ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
 ☼ # +             # # ☼
 ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
 ☼   #           #    #☼
-☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼&☼#☼&☼
+☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
 ☼                 ####☼
 ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼
 ☼ ☺   #      3       #☼
@@ -44,5 +44,14 @@ describe('Board', function () {
     it('should have a hero', function () {
         const hero = boardInstance.getHero();
         assert.notEqual(hero, undefined);
+    });
+
+    it('should have a hero', function () {
+        const meatChoppers = boardInstance.meatChoppers;
+        assert.equal(meatChoppers.length, 1);
+        const meatChopper = meatChoppers[0];
+        assert.equal(meatChopper.x, 9);
+
+        assert.equal(meatChopper.y, 1);
     });
 });

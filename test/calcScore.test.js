@@ -1,13 +1,24 @@
 const assert = require('assert');
 const { Board } = require('../src/Board');
-const { calc } = require('../src/calculateScore');
+const { calc, getPaths } = require('../src/calculateScore');
 const { GameState } = require('../src/GameState');
+const Point = require('../src/Point');
 
 
 function getBoard(boardStr) {
     const state = new GameState();
     state.initBoard(boardStr);
     return new Board(state);
+}
+
+function checkBoard(board, answer) {
+    const bombBoard = (board).replace(/\n +/ig, '');
+
+    const res = calc({
+        gameState: getBoard(bombBoard)
+    })
+
+    assert.equal(res, answer);
 }
 
 describe('score calc', function () {
@@ -27,7 +38,7 @@ describe('score calc', function () {
 ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
 ☼   #           #    #☼
 ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼&☼#☼&☼
-☼                 ####☼
+☼             ♥   ####☼
 ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼
 ☼ ☺   #      3       #☼
 ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
@@ -40,10 +51,9 @@ describe('score calc', function () {
     it('should create board', function () {
         const res = calc({
             gameState: getBoard(board),
-            action: 'LEFT'
         })
 
-        assert.equal(res, 8);
+        assert.equal(res, 'RIGHT');
     });
 
     it('should see walls amount', function () {
@@ -52,7 +62,7 @@ describe('score calc', function () {
             action: 'RIGHT'
         })
 
-        assert.equal(res, 10);
+        assert.equal(res, 'RIGHT');
     });
 
     const bombBoard = (`
@@ -71,8 +81,8 @@ describe('score calc', function () {
 ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
 ☼   #           #    #☼
 ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼&☼#☼&☼
-☼  3              ####☼
-☼2☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼
+☼  1              ####☼
+☼1☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼
 ☼ ☺   #      3       #☼
 ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
 ☼         #     #   # ☼
@@ -82,19 +92,10 @@ describe('score calc', function () {
 
     it('should see bombs amount', function () {
         const res = calc({
-            gameState: getBoard(bombBoard),
-            action: 'LEFT'
+            gameState: getBoard(bombBoard)
         })
 
-        assert(res < 0, 'avoid bomb');
-
-        const res2 = calc({
-            gameState: getBoard(bombBoard),
-            action: 'RIGHT',
-            bombsCount: 0
-        })
-
-        assert(res2 < 0);
+        assert(res, 'STOP');
     });
 
 
@@ -126,11 +127,9 @@ describe('score calc', function () {
 
         const res = calc({
             gameState: getBoard(bombBoard),
-            action: 'STOP'
         })
 
-        assert.ok(res < -0);
-
+        assert.ok(res, 'UP');
     });
 
     it('should way bombs 2', function () {
@@ -161,11 +160,9 @@ describe('score calc', function () {
 
         const res = calc({
             gameState: getBoard(bombBoard),
-            action: 'STOP',
-            bombsCount: 0
         })
 
-        assert.ok(res < 0);
+        assert.equal(res, 'LEFT');
     });
 
     it('should way bombs 2', function () {
@@ -195,11 +192,10 @@ describe('score calc', function () {
                 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
 
         const res = calc({
-            gameState: getBoard(bombBoard),
-            action: 'RIGHT'
+            gameState: getBoard(bombBoard)
         })
 
-        assert.ok(res < 0);
+        assert.notEqual(res, 'STOP');
 
     });
 
@@ -231,10 +227,290 @@ describe('score calc', function () {
 
         const res = calc({
             gameState: getBoard(bombBoard),
-            action: 'DOWN'
         })
 
-        assert.ok(res < 0);
+        assert.match(res, /LEFT|DOWN/);
+    });
 
+    it('should handle closed space', () => {
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼   #  &       #   #☺ ☼
+        ☼ ☼#☼ ☼#☼ ☼#☼ ☼ ☼#☼ ☼ ☼
+        ☼  #                 #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼
+        ☼##    # #  #     #   ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼
+        ☼  #   #     & ##     ☼
+        ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#    #               ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+        ☼    &                ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼♥☼ ☼ ☼#☼#☼
+        ☼     # #         #   ☼
+        ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼
+        ☼                     ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼## #           +##   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼#☼ ☼ ☼
+        ☼#    #   #       #   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼#☼#☼ ☼#☼#☼ ☼
+        ☼ #     #      #      ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+        const res = calc({
+            gameState: getBoard(bombBoard)
+        })
+
+        assert.equal(res, 'ACT');
+    });
+
+    it('should det way from bomb', () => {
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼   #  &       #   #☻ ☼
+        ☼ ☼#☼ ☼#☼ ☼#☼ ☼ ☼#☼ ☼ ☼
+        ☼  #                 #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼
+        ☼##    # #  #     #   ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼
+        ☼  #   #     & ##     ☼
+        ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#    #               ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+        ☼    &                ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼♥☼ ☼ ☼#☼#☼
+        ☼     # #         #   ☼
+        ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼
+        ☼                     ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼## #           +##   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼#☼ ☼ ☼
+        ☼#    #   #       #   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼#☼#☼ ☼#☼#☼ ☼
+        ☼ #     #      #      ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+        const res = calc({
+            gameState: getBoard(bombBoard)
+        })
+
+        assert.equal(res, 'RIGHT');
+    })
+
+    it('should det way from bomb even more', () => {
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼   #  &       #   #3☺☼
+        ☼ ☼#☼ ☼#☼ ☼#☼ ☼ ☼#☼ ☼ ☼
+        ☼  #                 #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼
+        ☼##    # #  #     #   ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼
+        ☼  #   #     & ##     ☼
+        ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#    #               ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+        ☼    &                ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼♥☼ ☼ ☼#☼#☼
+        ☼     # #         #   ☼
+        ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼
+        ☼                     ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼## #           +##   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼#☼ ☼ ☼
+        ☼#    #   #       #   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼#☼#☼ ☼#☼#☼ ☼
+        ☼ #     #      #      ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+        const res = calc({
+            gameState: getBoard(bombBoard)
+        })
+
+        assert.equal(res, 'DOWN');
+    });
+
+    it('should det way from bomb even more', () => {
+        checkBoard(`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼      #       # ☻    ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼ ##  #   ##         #☼
+        ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼      # 3♥ # #  #    ☼
+        ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼
+        ☼##   #           ##  ☼
+        ☼#☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼ ##  ##              ☼
+        ☼ ☼#☼ ☼#☼ ☼ ☼ ☼ ☼♠☼ ☼ ☼
+        ☼  # # #      #       ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼  #  ## #    #       ☼
+        ☼#☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼###    &        & # #☼
+        ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼ ☼
+        ☼    #         # ##   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼  # 3 ♥         #    ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
+        ☼            &        ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'DOWN');
+    });
+    it('should det way from bomb even more', () => {
+        checkBoard(`
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+    ☼         #      ♥    ☼
+    ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼☻☼ ☼ ☼
+    ☼          #    #    #☼
+    ☼ ☼#☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼
+    ☼ # #           &     ☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼ #      # #  #  #    ☼
+    ☼ ☼#☼ ☼ ☼♥☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼ & #   3 #     #     ☼
+    ☼#☼ ☼ ☼#☼#☼ ☼#☼#☼ ☼ ☼ ☼
+    ☼       ♥   #         ☼
+    ☼#☼ ☼#☼ ☼ ☼#☼ ☼ ☼ ☼#☼ ☼
+    ☼   #       # # ###   ☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼ #   #  ##          #☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
+    ☼                     ☼
+    ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼    &   ###  #   #   ☼
+    ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼#   &    #    #♠## # ☼
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'DOWN');
+    });
+
+    it('should det way from bomb even more', () => {
+        checkBoard(`
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+    ☼  #           &  # # ☼
+    ☼#☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+    ☼    #        #     # ☼
+    ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼  #       & #        ☼
+    ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼# #          # ##    ☼
+    ☼ ☼ ☼#☼ ☼☺☼ ☼ ☼ ☼ ☼#☼ ☼
+    ☼#      #3   ♥        ☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼#☼#☼
+    ☼## #  ##   #    #   ♠☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼
+    ☼                #  # ☼
+    ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼#☼ ☼ ☼ ☼
+    ☼  #     #   ##       ☼
+    ☼#☼♥☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼#☼
+    ☼   #& #  # #         ☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼
+    ☼       #          # &☼
+    ☼ ☼#☼ ☼ ☼#☼ ☼♥☼ ☼ ☼ ☼ ☼
+    ☼      #              ☼
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'UP');
+    });
+
+    it('should det way from bomb even more', () => {
+        checkBoard(`
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+    ☼3♥    # #♥3   #      ☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼#☼ ☼
+    ☼      ##    #  #  ☺  ☼
+    ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼3☼ ☼
+    ☼  #     #     ##    #☼
+    ☼ ☼ ☼#☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼       ###    #     #☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼#       #      #    #☼
+    ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+    ☼   ##     # #     #  ☼
+    ☼ ☼#☼#☼#☼ ☼ ☼#☼ ☼ ☼ ☼#☼
+    ☼   # # &             ☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼ #         # &    #  ☼
+    ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼                     ☼
+    ☼ ☼ ☼ ☼ ☼ ☼♥☼ ☼ ☼ ☼ ☼ ☼
+    ☼    #         #  ##  ☼
+    ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼♥☼ ☼
+    ☼    &#      ##    #  ☼
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'LEFT');
+    });
+
+    it('should det way from bomb even more', () => {
+        checkBoard(`
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+    ☼         1           ☼
+    ☼ ☼ ☼ ☼ ☼♥☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼     #   #        ## ☼
+    ☼☺☼ ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼ ☼
+    ☼҉                    ☼
+    ☼҉☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼҉    # # # #         ☼
+    ☼҉☼ ☼ ☼#☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+    ☼҉    ###    #       r☼
+    ☼҉☼ ☼ ☼#☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+    ☼҉        #     #    #☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+    ☼            #    #&  ☼
+    ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+    ☼      #    &         ☼
+    ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼#☼ ☼
+    ☼     #   #        #  ☼
+    ☼ ☼ ☼#☼ ☼#☼ ☼#☼ ☼ ☼ ☼ ☼
+    ☼ # #   #   ## ##   ##☼
+    ☼#☼ ☼#☼ ☼ ☼ ☼#☼#☼ ☼#☼&☼
+    ☼##    #&##         # ☼
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'UP');
+    });
+
+    describe('getPath', () => {
+        it('Should able to build path', () => {
+
+
+            const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼   #  &             ☺☼
+        ☼ ☼#☼ ☼#☼ ☼#☼ ☼ ☼ ☼ ☼ ☼
+        ☼  #                  ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼
+        ☼##    # #  #     #   ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼
+        ☼  #   #     & ##     ☼
+        ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#    #               ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+        ☼    &                ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼#☼
+        ☼     # #  ♥      #   ☼
+        ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼
+        ☼                     ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼## #           +##   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼#☼ ☼ ☼
+        ☼#    #   #       #   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼#☼#☼ ☼#☼#☼ ☼
+        ☼ #     #      #      ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+            const board = getBoard(bombBoard);
+
+            const hero = board.getHero();
+            assert.equal(hero.x, 21);
+            assert.equal(hero.y, 1);
+
+            const player = board.players[0];
+            assert.equal(player.x, 11);
+            assert.equal(player.y, 13);
+
+            const path = getPaths(board, hero, new Point(player.x, player.y));
+
+            assert.equal(path.length, 23);
+        })
     });
 });
+
+
+

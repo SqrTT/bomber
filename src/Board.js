@@ -26,17 +26,17 @@ const around = [
     [0, -1]
 ];
 
-var contains  = function(a, obj) {
+var contains = function (a, obj) {
     var i = a.length;
     while (i--) {
-       if (a[i].equals(obj)) {
-           return true;
-       }
+        if (a[i].equals(obj)) {
+            return true;
+        }
     }
     return false;
 };
 
-var removeDuplicates = function(all) {
+var removeDuplicates = function (all) {
     var result = [];
     for (var index in all) {
         var point = all[index];
@@ -53,8 +53,15 @@ class Board {
      * @param {Point} moveToPoint
      * @param {Point[]} elements
      */
-    countElementsAroundPt(moveToPoint, elements) {
-        var count = 0;
+    countElementsAroundPt(moveToPoint, elements, distance = 1) {
+        return this.getElementsAroundPt(moveToPoint, elements, distance).length;
+    }
+
+    getElementsAroundPt(moveToPoint, elements, distance = 1) {
+        /**
+         * @type {Point[]}
+         */
+        var elementsResult = [];
         var idx = elements.length;
 
         while (idx--) {
@@ -63,34 +70,81 @@ class Board {
 
             while (aroundIdx--) {
                 var [dx, dy] = around[aroundIdx];
-                if (element.equalsTo(dx + moveToPoint.x, dy + moveToPoint.y )) {
-                    count++;
+                var d = distance;
+                for (var d = 1; d <= distance; d++) {
+                    if (element.equalsTo((dx * d) + moveToPoint.x, (dy * d) + moveToPoint.y)) {
+                        elementsResult.push(element);
+                        break;
+                    }
                 }
             }
         }
-        return count;
+        return elementsResult;
+    }
+    getMeatChoppersAura() {
+        const aura = this.meatChoppers.map(chopper => {
+            return [new Point(chopper.getX() - 1, chopper.getY()),
+            new Point(chopper.getX() + 1, chopper.getY()),
+            new Point(chopper.getX(), chopper.getY() - 1),
+            new Point(chopper.getX(), chopper.getY() + 1)
+            ]
+        })
+        return [].concat(...aura)
     }
 
-    getBarriers() {
+    getBarriers(skipBlasts = false) {
+
         return [].concat(
             this.meatChoppers,
+           // this.getMeatChoppersAura(),
             this.walls,
             this.destroyableWalls,
             this.players,
-            this.getFutureBlasts()
+            skipBlasts ? [] : this.getFutureBlasts(2)
         );
     }
+    toWalkMatrix() {
+        if (!this._walkMatrix) {
+            this._walkMatrix = (new Array(this.size)).fill(0).map(() => {
+                return (new Array(this.size)).fill(0);
+            });
+            this.getBarriers().forEach(bar => {
+                this._walkMatrix[bar.y][bar.x] = 1;
+            })
+        }
 
-    getFutureBlasts() {
+        return this._walkMatrix;
+    }
+
+    getFutureBlasts(time = 1) {
         var bombs = this.bombs;
         var result = [];
         for (var index in bombs) {
             var bomb = bombs[index];
             result.push(bomb);
-            result.push(new Point(bomb.getX() - 1, bomb.getY())); // TODO to remove duplicate
-            result.push(new Point(bomb.getX() + 1, bomb.getY()));
-            result.push(new Point(bomb.getX()    , bomb.getY() - 1));
-            result.push(new Point(bomb.getX()    , bomb.getY() + 1));
+
+            var aroundIdx = around.length;
+
+            if (bomb.timer <= time) {
+                while (aroundIdx--) {
+                    var [dx, dy] = around[aroundIdx];
+                    for (var d = 1; d <= bomb.power; d++) {
+                        var point = new Point((dx * d) + bomb.x, (dy * d) + bomb.y);
+                        if (this.walls.some(w => w.equals(point))) {
+                            break;
+                        } else if (this.destroyableWalls.some(w => w.equals(point))) {
+                            break;
+                        } else if (this.players.some(w => w.equals(point))) {
+                            break;
+                        } else if (this.hero.equals(point)) {
+                            result.push(point);
+                            break;
+                        } else {
+                            result.push(point);
+                        }
+                    }
+                }
+            }
         }
         var result2 = [];
         for (var index in result) {
@@ -107,6 +161,7 @@ class Board {
             this.size = oldBoard.size;
             this.rows = oldBoard.rows;
         } else {
+            this.size = gameState.size;
             this.walls = gameState.walls.map(wl => new Point(wl.x, wl.y));
             this.destroyableWalls = gameState.destroyableWalls.map(wl => new Point(wl.x, wl.y));
             this.bombs = gameState.bombs.map(bomb => new Bomb(bomb.owner, bomb.x, bomb.y, bomb.power, bomb.timer));
@@ -124,6 +179,11 @@ class Board {
                 pl.bombsCount,
                 pl.bombsPower
             ));
+
+            this.perks = {};
+            Object.keys(gameState.perks).forEach(perkType => {
+                this.perks[perkType] = gameState.perks[perkType].map(wl => new Point(wl.x, wl.y))
+            })
         }
     }
     /**
@@ -146,6 +206,13 @@ class Board {
 
         return newBoard;
 
+    }
+    getUsefulPerks() {
+        return this.perks[Element.BOMB_BLAST_RADIUS_INCREASE]
+            .concat(
+                this.perks[Element.BOMB_COUNT_INCREASE],
+                this.perks[Element.BOMB_IMMUNE]
+            )
     }
     removeBlasts() {
         var rowsIdx = this.rows.length;

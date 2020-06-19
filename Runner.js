@@ -96,15 +96,12 @@ function passToPseudoIdWorker(workerID, data) {
         const parsed = JSON.parse(JSON.stringify(data));
         const score = calc(parsed);
 
-        resolve({
-            score,
-            action: parsed.action
-        });
+        resolve(score);
     })
 }
 
 // const passToWorkerId = passToWorkerIdWorker;
-const passToWorkerId = passToPseudoIdWorker;
+const passToWorkerId = process.argv.includes('live') ? passToPseudoIdWorker : passToPseudoIdWorker;
 
 
 /**
@@ -122,37 +119,14 @@ async function processBoard(boardString) {
         if (bomberPosition === -1) {
             bomberPosition = boardString.indexOf(Element.BOMB_BOMBERMAN);
         }
-        const actions = [];
 
-        if (isWalkableElement(boardString[bomberPosition + 1])) {
-            actions.push('RIGHT')
-        }
-        if (isWalkableElement(boardString[bomberPosition - 1])) {
-            actions.push('LEFT')
-        }
-        if (isWalkableElement(boardString[bomberPosition + boardSize])) {
-            actions.push('DOWN')
-        }
-        if (isWalkableElement(boardString[bomberPosition - boardSize])) {
-            actions.push('UP')
-        }
+        const result = await passToWorkerId(0, {
+            board: boardString,
+            gameState,
+        });
 
-        actions.push('STOP');
-
-        const result = await Promise.all(actions.map((action, idx) => {
-            const pr = passToWorkerId(idx, {
-                board: boardString,
-                gameState,
-                tick: gameState.getTick(),
-                action
-            })
-            return pr;
-        }));
-
-        const bestScore = result.sort((a, b) => {
-            return b.score - a.score;
-        })[0];
-        answer = (bestScore && bestScore.action) || '';
+        const bestScore = result;
+        answer = result || '';
 
         scores = result;
 

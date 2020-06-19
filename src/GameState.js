@@ -17,7 +17,7 @@ class GameState {
      */
     getXY(pos) {
         var x = pos % this.size;
-        var y = this.size - 1 - Math.trunc(pos / this.size);
+        var y = Math.trunc(pos / this.size);
         return Point.pt(x, y);
     }
     findAll(element, board = this[boardSymbol]) {
@@ -90,7 +90,7 @@ class GameState {
                 }
                 return bomb;
             } else {
-                return new Bomb(undefined, bombPoint.x, bombPoint.y, 3, 5);
+                return new Bomb(undefined, bombPoint.x, bombPoint.y, 3, Number(element));
             }
         }
         /**
@@ -108,7 +108,7 @@ class GameState {
     }
 
     getBoardPos(x, y) {
-        return (this.size - 1 - y) * this.size + x;
+        return y * this.size + x;
     }
 
     getAt(x, y) {
@@ -267,12 +267,12 @@ class GameState {
             if (el !== Element.OTHER_BOMB_BOMBERMAN && el !== Element.BOMB_BOMBERMAN && !isBomb(el)) {
                 if (bomb.owner === -1) {
                     this.hero.bombsCount++;
-                }
-                else {
-                    this.players[bomb.owner].bombsCount++;
+                } else {
+                    bomb.owner && this.players[bomb.owner].bombsCount++;
                 }
                 return false;
             }
+            bomb.timer--;
             return true;
         });
     }

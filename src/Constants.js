@@ -1,3 +1,5 @@
+const Point = require("./Point");
+
 var Element = {
     /// This is your Bomberman
     BOMBERMAN: '☺',
@@ -121,6 +123,9 @@ class Dir {
         this.dy = dy;
         this.name = name;
     }
+    nextPoint(pt) {
+        return new Point(pt.x + this.dx, pt.y + this.dy);
+    }
     changeX(x) {
         return x + this.dx;
     }
@@ -148,14 +153,28 @@ class Dir {
     }
 }
 
-exports.Direction = {
-    UP: new Dir(2, 0, 1, 'UP'),                 // you can move
-    DOWN: new Dir(3, 0, -1, 'DOWN'),
+const Direction = {
+    UP: new Dir(2, 0, -1, 'UP'),                 // you can move
+    DOWN: new Dir(3, 0, 1, 'DOWN'),
     LEFT: new Dir(0, -1, 0, 'LEFT'),
     RIGHT: new Dir(1, 1, 0, 'RIGHT'),
     ACT: new Dir(4, 0, 0, 'ACT'),                // drop bomb
     STOP: new Dir(5, 0, 0, 'STOP')                   // stay
 };
+
+exports.getCommandByCoord = function (x, y, x2, y2) {
+    if (x < x2) {
+        return Direction.RIGHT;
+    } else if (x > x2) {
+        return Direction.LEFT;
+    } else if (y > y2) {
+        return Direction.UP;
+    } else {
+        return Direction.DOWN;
+    }
+}
+
+exports.Direction = Direction;
 
 const nonWalkableElements = [
     Element.WALL,
