@@ -1,5 +1,5 @@
 
-const { Element, isBomber, isWalkableElement } = require('./Constants');
+const { Element, isBomber, isWalkableElement, settings, DirectionList } = require('./Constants');
 const Actor = require('./Actor');
 const Point = require('./Point');
 const Player = require('./Player');
@@ -92,11 +92,97 @@ class Board {
         return [].concat(...aura)
     }
 
+    getBarrierMatrix() {
+        if (!this._barrierMatrix) {
+            const matrix = (new Array(this.size)).fill(false)
+                .map(() => (new Array(this.size)).fill(false));
+
+            this.walls.forEach(wall => { matrix[wall.y][wall.x] = true });
+            this.bombs.forEach(wall => { matrix[wall.y][wall.x] = true });
+            this.meatChoppers.forEach(wall => { matrix[wall.y][wall.x] = true });
+            this.destroyableWalls.forEach(wall => { matrix[wall.y][wall.x] = true });
+            this._barrierMatrix = matrix;
+        }
+        return this._barrierMatrix;
+    }
+
+    rollAllDirections(fromPt, distance, cb) {
+        const matrix = this.getBarrierMatrix();
+        DirectionList.forEach(dir => {
+            var currentPoint = fromPt
+            for (var i = 0; i < distance; i++) {
+                currentPoint = dir.nextPoint(currentPoint);
+                if (!matrix[currentPoint.y][currentPoint.x]) {
+                    cb(currentPoint, i);
+                } else {
+                    return;
+                }
+            }
+        })
+    }
+
+    getScoresBoard() {
+        if (!this._scoresBoard) {
+            const bombPower = this.hero.bombsPower;
+            const scoresBoard = (new Array(this.size)).fill(0).map(
+                () => (new Array(this.size)).fill(0));
+
+            this.destroyableWalls.forEach(wall => {
+                scoresBoard[wall.y][wall.x] += settings.killWallScore;
+                this.rollAllDirections(wall, bombPower, (pt) => {
+                    scoresBoard[pt.y][pt.x] += settings.killWallScore;
+                });
+            });
+
+            this.meatChoppers.forEach(wall => {
+                scoresBoard[wall.y][wall.x] += settings.killMeatChopperScore;
+                this.rollAllDirections(wall, bombPower, (pt, idx) => {
+                    scoresBoard[pt.y][pt.x] += settings.killMeatChopperScore;
+                });
+            });
+
+            this.players.forEach(player => {
+                if (player.alive) {
+                    const around = this.countElementsAroundPt(player, this.getBarriers()) || 1;
+                    const killScore = settings.killOtherHeroScore + (this.players.length === 1 ? settings.winRoundScore : 0) / around;
+
+                    scoresBoard[player.y][player.x] += killScore;
+                    this.rollAllDirections(player, bombPower, (pt) => {
+                        scoresBoard[pt.y][pt.x] += killScore;
+                    });
+                }
+            });
+
+            this.getUsefulPerks().forEach(perk => {
+                scoresBoard[perk.y][perk.x] += settings.usePerkScore;
+            });
+
+            // negative scores
+            // this.bombs.forEach(bomb => {
+            //     const bombScore = settings.diePenalty + 8 - (bomb.timer * 2);
+            //     scoresBoard[bomb.y][bomb.x] -= bombScore;
+            //     this.rollAllDirections(bomb, bomb.power, (pt, i) => {
+            //         scoresBoard[pt.y][pt.x] -= bombScore + bomb.power - i;
+            //     });
+            // });
+
+            // this.meatChoppers.forEach(wall => {
+            //     scoresBoard[wall.y][wall.x] -= settings.diePenalty;
+            //     this.rollAllDirections(wall, 1, (pt, idx) => {
+            //         scoresBoard[pt.y][pt.x] -= settings.diePenalty;
+            //     });
+            // });
+
+            this._scoresBoard = scoresBoard;
+        }
+        return this._scoresBoard;
+    }
+
     getBarriers(skipBlasts = false) {
 
         return [].concat(
             this.meatChoppers,
-           // this.getMeatChoppersAura(),
+            // this.getMeatChoppersAura(),
             this.walls,
             this.destroyableWalls,
             this.players,
@@ -105,12 +191,49 @@ class Board {
     }
     toWalkMatrix() {
         if (!this._walkMatrix) {
-            this._walkMatrix = (new Array(this.size)).fill(0).map(() => {
-                return (new Array(this.size)).fill(0);
+            this._walkMatrix = (new Array(this.size)).fill(1).map(() => {
+                return (new Array(this.size)).fill(1);
             });
-            this.getBarriers().forEach(bar => {
-                this._walkMatrix[bar.y][bar.x] = 1;
-            })
+
+            this.walls.forEach(bar => {
+                this._walkMatrix[bar.y][bar.x] = 0;
+            });
+
+            const someWall = this.walls.concat(this.destroyableWalls);
+
+            this.destroyableWalls.forEach(bar => {
+                this._walkMatrix[bar.y][bar.x] = 8;
+            });
+
+            this.meatChoppers.forEach(ch => {
+                this._walkMatrix[ch.y][ch.x] += 15;
+
+                DirectionList.forEach(dir => {
+                    const currentPoint = dir.nextPoint(ch);
+                    if (!someWall.some(w => w.equals(currentPoint))) {
+                        this._walkMatrix[currentPoint.y][currentPoint.x] += 20;
+                    }
+                })
+            });
+
+            this.bombs.forEach(bomb => {
+                this._walkMatrix[bomb.y][bomb.x] = 25 + (5 - bomb.timer);
+
+                DirectionList.forEach(dir => {
+                    var currentPoint = dir.nextPoint(bomb);
+                    var d = bomb.power;
+                    for (var d = 1; d <= bomb.power; d++) {
+                        if (someWall.some(w => w.equals(currentPoint))) {
+                            this._walkMatrix[currentPoint.y][currentPoint.x] += 100 + (5 - bomb.timer) - d;
+                            break;
+                        } else {
+                            this._walkMatrix[currentPoint.y][currentPoint.x] += 25 + (5 - bomb.timer) - d;
+                            currentPoint = dir.nextPoint(currentPoint);
+                        }
+                    }
+
+                })
+            });
         }
 
         return this._walkMatrix;

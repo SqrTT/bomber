@@ -2,21 +2,50 @@
 
 var util = require('util');
 var WSocket = require('ws');
-const { Worker } = require('worker_threads');
 const { Element, isWalkableElement } = require("./src/Constants");
 
 const { GameState } = require("./src/GameState");
 const { GameStates, GameStatesStr } = require("./src/GameStates");
 
 
-const workers = [
-    new Worker('./src/worker.js'),
-    new Worker('./src/worker.js'),
-    new Worker('./src/worker.js'),
-    new Worker('./src/worker.js'),
-    new Worker('./src/worker.js'),
-    new Worker('./src/worker.js')
-];
+// const { Worker } = require('worker_threads');
+// const workers = [
+//     new Worker('./src/worker.js'),
+//     new Worker('./src/worker.js'),
+//     new Worker('./src/worker.js'),
+//     new Worker('./src/worker.js'),
+//     new Worker('./src/worker.js'),
+//     new Worker('./src/worker.js')
+// ];
+// workers.forEach(worker => {
+//     worker.on('error', (err) => {
+//         console.error(err)
+//     });
+//     worker.on('exit', (code) => {
+//         console.error(`Worker exited: ${code}`)
+//     });
+// })
+// /**
+//  * @param {number} workerID
+//  */
+// function passToWorkerIdWorker(workerID, data) {
+//     return new Promise(resolve => {
+//         const uuid = getNextID();
+//         const worker = workers[workerID];
+//         const cb = (msgStr) => {
+//             const msg = JSON.parse(msgStr);
+//             if (msg.uuid === uuid) {
+//                 resolve(msg.data);
+//                 worker.off('message', cb);
+//             }
+//         }
+//         worker.on('message', cb);
+//         worker.postMessage(JSON.stringify({
+//             uuid,
+//             data
+//         }));
+//     })
+// }
 
 var wss;
 const wsClients = [];
@@ -40,14 +69,7 @@ function sendToClients(data) {
     });
 }
 
-workers.forEach(worker => {
-    worker.on('error', (err) => {
-        console.error(err)
-    });
-    worker.on('exit', (code) => {
-        console.error(`Worker exited: ${code}`)
-    });
-})
+
 
 
 var log = function (string) {
@@ -68,27 +90,7 @@ function getNextID() {
     return ++uniqID;
 }
 
-/**
- * @param {number} workerID
- */
-function passToWorkerIdWorker(workerID, data) {
-    return new Promise(resolve => {
-        const uuid = getNextID();
-        const worker = workers[workerID];
-        const cb = (msgStr) => {
-            const msg = JSON.parse(msgStr);
-            if (msg.uuid === uuid) {
-                resolve(msg.data);
-                worker.off('message', cb);
-            }
-        }
-        worker.on('message', cb);
-        worker.postMessage(JSON.stringify({
-            uuid,
-            data
-        }));
-    })
-}
+
 
 function passToPseudoIdWorker(workerID, data) {
     return new Promise(resolve => {
@@ -96,7 +98,10 @@ function passToPseudoIdWorker(workerID, data) {
         const parsed = JSON.parse(JSON.stringify(data));
         const score = calc(parsed);
 
-        resolve(score);
+        resolve({
+            score,
+            parsed
+        });
     })
 }
 
@@ -120,7 +125,7 @@ async function processBoard(boardString) {
             bomberPosition = boardString.indexOf(Element.BOMB_BOMBERMAN);
         }
 
-        const result = await passToWorkerId(0, {
+        const { score: result, parsed } = await passToWorkerId(0, {
             board: boardString,
             gameState,
         });
@@ -134,7 +139,8 @@ async function processBoard(boardString) {
             answer,
             bestScore,
             boardString,
-            gameState
+            gameState,
+            parsed
         });
 
     } else {
@@ -149,7 +155,7 @@ async function processBoard(boardString) {
     var logMessage = boardAsString(boardString, boardSize) + "\n\n";
 
     logMessage += "Answer: " + answer + `: ${GameStatesStr[gameState.getState()]} : ${gameState.getTick()}\n`;
-    logMessage += `bombs: ${gameState.hero && gameState.hero.bombsCount} - ${JSON.stringify(scores)}\n`;
+    logMessage += `bombs: ${gameState.hero && gameState.hero.bombsCount} }\n`;
     logMessage += "-----------------------------------\n";
 
     log(logMessage);

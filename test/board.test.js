@@ -1,6 +1,7 @@
 var assert = require('assert');
 const { Board } = require('../src/Board');
 const { GameState } = require('../src/GameState');
+const { settings } = require('../src/Constants');
 
 
 
@@ -33,7 +34,7 @@ describe('Board', function () {
 ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
 ☼         #     #   # ☼
 ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼
-☼#                    ☼
+☼#                   ♥☼
 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n/ig, '');
 
     const boardInstance = getBoard(board);
@@ -53,5 +54,12 @@ describe('Board', function () {
         assert.equal(meatChopper.x, 9);
 
         assert.equal(meatChopper.y, 1);
+    });
+
+    it('should calculate scores', () => {
+        const weight = boardInstance.getScoresBoard();
+
+        assert.equal(weight[1][8], settings.killMeatChopperScore);
+        //assert.equal(weight[21][21], settings.killOtherHeroScore);
     });
 });

@@ -76,34 +76,35 @@ const otherBombers = [
 exports.isOtherBomber = (char) => otherBombers.includes(char);
 
 exports.settings = {
-    'boardSize': 23,
-    'bombPower': 3,
-    'bombsCount': 1,
-    'destroyWallCount': 52,
-    'diePenalty': 2,
-    'isMultiple': true,
-    'killMeatChopperScore': 3,
-    'killOtherHeroScore': 10,
-    'killWallScore': 1,
-    'meatChoppersCount': 5,
-    'perkBombBlastRadiusInc': 2,
-    'perkBombCountInc': 3,
-    'perkDropRatio': 20,
-    'perkPickTimeout': 5,
-    'playersPerRoom': 5,
-    'remoteControlCount': 3,
-    'roundSettings': {
-        'minTicksForWin': 1,
-        'roundsEnabled': false,
-        'roundsPerMatch': 1,
-        'timeBeforeStart': 5,
-        'timeForWinner': 1,
-        'timePerRound': 300
+    boardSize: 23,
+    bombPower: 3,
+    bombsCount: 1,
+    destroyWallCount: 52,
+    diePenalty: 30,
+    isMultiple: true,
+    killMeatChopperScore: 10,
+    killOtherHeroScore: 20,
+    killWallScore: 1,
+    usePerkScore: 5,
+    meatChoppersCount: 5,
+    perkBombBlastRadiusInc: 2,
+    perkBombCountInc: 4,
+    perkDropRatio: 20,
+    perkPickTimeout: 30,
+    playersPerRoom: 5,
+    remoteControlCount: 3,
+    roundSettings: {
+        minTicksForWin: 1,
+        roundsEnabled: false,
+        roundsPerMatch: 1,
+        timeBeforeStart: 5,
+        timeForWinner: 1,
+        timePerRound: 200
     },
-    'timeoutBombBlastRadiusInc': 10,
-    'timeoutBombCountInc': 10,
-    'timeoutBombImmune': 10,
-    'winRoundScore': 15
+    timeoutBombBlastRadiusInc: 30,
+    timeoutBombCountInc: 30,
+    timeoutBombImmune: 30,
+    winRoundScore: 30
 }
 
 const bombs = [
@@ -144,7 +145,7 @@ class Dir {
     //     }
     // };
 
-    toString = function () {
+    toString () {
         return this.name;
     }
 
@@ -161,6 +162,13 @@ const Direction = {
     ACT: new Dir(4, 0, 0, 'ACT'),                // drop bomb
     STOP: new Dir(5, 0, 0, 'STOP')                   // stay
 };
+
+exports.DirectionList = [
+    Direction.UP,
+    Direction.DOWN,
+    Direction.LEFT,
+    Direction.RIGHT
+];
 
 exports.getCommandByCoord = function (x, y, x2, y2) {
     if (x < x2) {

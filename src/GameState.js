@@ -187,6 +187,17 @@ class GameState {
             }
         });
 
+        // check for new players
+        const playerPoints = [].concat(
+            this.findAll(Element.OTHER_BOMBERMAN),
+            this.findAll(Element.OTHER_BOMB_BOMBERMAN));
+
+        playerPoints.forEach(p => {
+            if (this.players.every(e => !e.equals(p))) {
+                this.players.push(new Player(p.x, p.y))
+            }
+        })
+
         const processHero = (player, playerID) => {
             if (player.alive) {
                 const el = this.getAt(player.x, player.y);
@@ -272,7 +283,9 @@ class GameState {
                 }
                 return false;
             }
-            bomb.timer--;
+            if (bomb.timer !== 5) {
+                bomb.timer--;
+            }
             return true;
         });
     }

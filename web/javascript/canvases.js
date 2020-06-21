@@ -47,7 +47,7 @@ function initCanvas() {
             plotsUrls[color] = 'sprites/' + color + '.png';
 
             var image = new Image();
-            image.onload = function() {
+            image.onload = function () {
                 if (plotSize == 0) {
                     plotSize = this.width;
                     canvasSize = plotSize * boardSize;
@@ -62,17 +62,17 @@ function initCanvas() {
     }
 
     function loadCanvasData(alphabet, elements) {
-        loadSpriteImages(elements, alphabet, function() {
+        loadSpriteImages(elements, alphabet, function () {
             var canvas = createCanvas('board-canvas');
 
-            $('body').on('board-updated', function(events, data) {
+            $('body').on('board-updated', function (events, { data, extraData }) {
                 canvas.boardSize = data.split('\n')[0].length;
-                drawBoard(getBoardDrawer(canvas, data.split('\n').join('')));
+                drawBoard(getBoardDrawer(canvas, data.split('\n').join(''), extraData));
             });
         });
     }
 
-    function decode(ch){
+    function decode(ch) {
         return plots[ch];
     }
 
@@ -85,9 +85,10 @@ function initCanvas() {
         return false;
     }
 
-    var getBoardDrawer = function(canvas, boardData) {
-        var drawAllLayers = function(layers, onDrawItem){
-            var drawChar = function(plotIndex) {
+    /** */
+    var getBoardDrawer = function (canvas, boardData, extraData) {
+        var drawAllLayers = function (layers, onDrawItem) {
+            var drawChar = function (plotIndex) {
                 var x = 0;
                 var y = boardSize - 1;
                 for (var charIndex = 0; charIndex < layers[0].length; charIndex++) {
@@ -103,8 +104,8 @@ function initCanvas() {
                     }
                     x++;
                     if (x == boardSize) {
-                       x = 0;
-                       y--;
+                        x = 0;
+                        y--;
                     }
                 }
             }
@@ -119,26 +120,26 @@ function initCanvas() {
             }
         }
 
-        var drawBackground = function(name) {
+        var drawBackground = function (name) {
             if (plotsContains(name)) {
                 var x = boardSize / 2 - 0.5;
                 canvas.drawPlot(name, x, 0);
             }
         }
 
-        var drawBack = function() {
+        var drawBack = function () {
             drawBackground('background');
         }
 
-        var drawFog = function() {
+        var drawFog = function () {
             drawBackground('fog');
         }
 
-        var clear = function() {
+        var clear = function () {
             canvas.clear();
         }
 
-        var drawLayers = function(onDrawItem) {
+        var drawLayers = function (onDrawItem) {
             var toDraw = (!boardData.layers) ? [boardData] : boardData.layers;
             try {
                 drawAllLayers(toDraw, onDrawItem);
@@ -147,13 +148,26 @@ function initCanvas() {
             }
         }
 
+        function drawScores() {
+            var { scores } = extraData;
+            if (scores) {
+                scores.forEach((row, y) => {
+                    row.forEach((cel, x) => {
+                        if (cel != 0 && cel != 1)
+                            canvas.drawText(cel, x, y);
+                    })
+                })
+            }
+        }
+
         return {
-            clear : clear,
-            drawBack : drawBack,
-            drawLayers : drawLayers,
-            drawFog : drawFog,
-            canvas : canvas,
-            boardData : boardData
+            clear: clear,
+            drawBack: drawBack,
+            drawLayers: drawLayers,
+            drawFog: drawFog,
+            canvas: canvas,
+            boardData: boardData,
+            drawScores: drawScores
         };
     };
 
@@ -162,6 +176,7 @@ function initCanvas() {
         drawer.drawBack();
         drawer.drawLayers();
         drawer.drawFog();
+        drawer.drawScores();
     }
 
     function createCanvas(canvasName) {
@@ -172,38 +187,79 @@ function initCanvas() {
             canvas[0].height = canvasSize;
         }
 
-        var drawPlot = function(color, x, y) {
+        var drawPlot = function (color, x, y) {
             var image = images[color];
             drawImage(image, x, y, 0, 0);
         }
 
-        var drawImage = function(image, x, y, dx, dy) {
+        var drawImage = function (image, x, y, dx, dy) {
             var ctx = canvas[0].getContext("2d");
             ctx.drawImage(
                 image,
-                x * plotSize - (image.width - plotSize)/2 + dx,
+                x * plotSize - (image.width - plotSize) / 2 + dx,
                 (boardSize - 1 - y) * plotSize - (image.height - plotSize) + dy
             );
         };
 
-        var clear = function() {
+        function drawTextBG(ctx, txt, font, x, y) {
+
+            /// lets save current state as we make a lot of changes
+            ctx.save();
+
+            /// set font
+            ctx.font = font;
+
+            /// draw text from top - makes life easier at the moment
+            ctx.textBaseline = 'top';
+
+            /// color for background
+            ctx.fillStyle = '#fff';
+
+            /// get width of text
+            var width = ctx.measureText(txt).width;
+
+            /// draw background rect assuming height of font
+            ctx.fillRect(x, y, width, parseInt(font, 10));
+
+            /// text color
+            ctx.fillStyle = '#000';
+
+            /// draw text on top
+            ctx.fillText(txt, x, y);
+
+            /// restore original state
+            ctx.restore();
+        }
+
+        var drawText = function (text, x, y) {
+            /**
+             * @type {HTMLCanvasElement}
+             */
+            var canv = canvas.get(0);
+            var ctx = canv.getContext("2d");
+
+            drawTextBG(ctx, text, 10, x * plotSize + 10 - (String(text).length > 1 ? 5 : 0), (y) * plotSize +5)
+        }
+
+        var clear = function () {
             // canvas.clearCanvas();
         }
 
-        var getCanvasSize = function() {
+        var getCanvasSize = function () {
             return canvasSize;
         }
 
-        var getPlotSize = function() {
+        var getPlotSize = function () {
             return plotSize;
         }
 
         return {
-            drawImage : drawImage,
-            drawPlot : drawPlot,
-            clear : clear,
-            getCanvasSize : getCanvasSize,
-            getPlotSize : getPlotSize
+            drawImage: drawImage,
+            drawPlot: drawPlot,
+            clear: clear,
+            getCanvasSize: getCanvasSize,
+            getPlotSize: getPlotSize,
+            drawText: drawText
         };
     }
 }

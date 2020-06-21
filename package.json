@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^8.2.0",
+    "dynamic-astar": "^1.0.2",
     "mocha": "^8.0.1",
     "pathfinding": "^0.4.18",
     "ws": "^7.3.0"

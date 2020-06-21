@@ -26,7 +26,7 @@ describe('score calc', function () {
 ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
 ☼        & &          ☼
 ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼#☼#☼
-☼   ##  # # ##     # #☼
+☼   ##  # # ##     #♥#☼
 ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
 ☼ #             # #   ☼
 ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
@@ -49,8 +49,9 @@ describe('score calc', function () {
 
 
     it('should create board', function () {
+        const b = getBoard(board);
         const res = calc({
-            gameState: getBoard(board),
+            gameState: b
         })
 
         assert.equal(res, 'RIGHT');
