@@ -95,12 +95,11 @@ function getNextID() {
 function passToPseudoIdWorker(workerID, data) {
     return new Promise(resolve => {
         const { calc } = require('./src/calculateScore.js');
-        const parsed = JSON.parse(JSON.stringify(data));
-        const score = calc(parsed);
+        const score = calc(data);
 
         resolve({
             score,
-            parsed
+            parsed: data
         });
     })
 }
@@ -119,6 +118,7 @@ async function processBoard(boardString) {
     gameState.tick(boardString);
     const boardSize = Math.sqrt(boardString.length);
 
+    const time = Date.now();
     if (gameState.getState() === GameStates.IN_PROGRESS) {
         let bomberPosition = boardString.indexOf(Element.BOMBERMAN);
         if (bomberPosition === -1) {
@@ -154,7 +154,7 @@ async function processBoard(boardString) {
 
     var logMessage = boardAsString(boardString, boardSize) + "\n\n";
 
-    logMessage += "Answer: " + answer + `: ${GameStatesStr[gameState.getState()]} : ${gameState.getTick()}\n`;
+    logMessage += "Answer: " + answer + `: ${GameStatesStr[gameState.getState()]} : ${gameState.getTick()} - time: ${Date.now() - time}\n`;
     logMessage += `bombs: ${gameState.hero && gameState.hero.bombsCount} }\n`;
     logMessage += "-----------------------------------\n";
 

@@ -11,11 +11,15 @@ function getBoard(boardStr) {
     return new Board(state);
 }
 
-function checkBoard(board, answer) {
+function checkBoard(board, answer, prepare) {
     const bombBoard = (board).replace(/\n +/ig, '');
+    const b = getBoard(bombBoard);
 
+    if (prepare) {
+        prepare(b);
+    }
     const res = calc({
-        gameState: getBoard(bombBoard)
+        gameState: b
     })
 
     assert.equal(res, answer);
@@ -465,6 +469,37 @@ describe('score calc', function () {
     ☼##    #&##         # ☼
     ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'UP');
     });
+
+
+    it.only('should det way from bomb even more', () => {
+        checkBoard(`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼  #     #    # #   # ☼
+        ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼#  ##        # #     ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼#☼ ☼ ☼#☼
+        ☼    # #      # &     ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼## #    ##         # ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
+        ☼ # # #  # #    #     ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼   &  #    #   #  # &☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼          #  # #  #  ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼         #         # ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼                     ☼
+        ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼ #    ☻             #☼
+        ☼ ☼ ☼ ☼♥☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼             &     ##☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'UP', board => {
+            board.hero.bombsCount = 0;
+        });
+    });
+
 
     describe('getPath', () => {
         it('Should able to build path', () => {

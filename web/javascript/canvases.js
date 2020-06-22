@@ -160,6 +160,15 @@ function initCanvas() {
             }
         }
 
+        function drawRoute() {
+            var { nextPath } = extraData;
+            if (nextPath) {
+                nextPath.forEach(([x, y]) => {
+                    canvas.drawRec(x, y);
+                })
+            }
+        }
+
         return {
             clear: clear,
             drawBack: drawBack,
@@ -167,7 +176,8 @@ function initCanvas() {
             drawFog: drawFog,
             canvas: canvas,
             boardData: boardData,
-            drawScores: drawScores
+            drawScores: drawScores,
+            drawRoute: drawRoute
         };
     };
 
@@ -177,6 +187,7 @@ function initCanvas() {
         drawer.drawLayers();
         drawer.drawFog();
         drawer.drawScores();
+        drawer.drawRoute();
     }
 
     function createCanvas(canvasName) {
@@ -200,6 +211,24 @@ function initCanvas() {
                 (boardSize - 1 - y) * plotSize - (image.height - plotSize) + dy
             );
         };
+
+        function drawRec(x, y) {
+            /**
+             * @type {HTMLCanvasElement}
+             */
+            var canv = canvas.get(0);
+            var ctx = canv.getContext("2d");
+
+            /// lets save current state as we make a lot of changes
+            ctx.save();
+            ctx.fillStyle = "blue";
+            ctx.globalAlpha = 0.4;
+            ctx.fillRect(x * plotSize, y * plotSize,  10, 10);
+            ctx.globalAlpha = 1.0;
+
+            /// restore original state
+            ctx.restore();
+        }
 
         function drawTextBG(ctx, txt, font, x, y) {
 
@@ -238,7 +267,7 @@ function initCanvas() {
             var canv = canvas.get(0);
             var ctx = canv.getContext("2d");
 
-            drawTextBG(ctx, text, 10, x * plotSize + 10 - (String(text).length > 1 ? 5 : 0), (y) * plotSize +5)
+            drawTextBG(ctx, text, 10, x * plotSize + (plotSize / String(text).length) - 5, (y) * plotSize + 5)
         }
 
         var clear = function () {
@@ -259,7 +288,8 @@ function initCanvas() {
             clear: clear,
             getCanvasSize: getCanvasSize,
             getPlotSize: getPlotSize,
-            drawText: drawText
+            drawText: drawText,
+            drawRec: drawRec
         };
     }
 }

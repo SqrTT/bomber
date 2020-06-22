@@ -56,7 +56,10 @@ const state = {
 var processBoard = function ({ boardString, answer, gameState, parsed }) {
     var board = Board(boardString);
     if (!!printBoardOnTextArea) {
-        printBoardOnTextArea(board.boardAsString(), { scores: parsed && parsed.scores });
+        printBoardOnTextArea(board.boardAsString(), {
+            scores: parsed && parsed.scores,
+            nextPath:  parsed && parsed.nextPath
+        });
     }
 
     if (gameState && gameState.hero) {

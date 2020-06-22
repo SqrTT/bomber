@@ -87,7 +87,7 @@ exports.settings = {
     killWallScore: 1,
     usePerkScore: 5,
     meatChoppersCount: 5,
-    perkBombBlastRadiusInc: 2,
+    perkBombBlastRadiusInc: 3,
     perkBombCountInc: 4,
     perkDropRatio: 20,
     perkPickTimeout: 30,

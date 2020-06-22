@@ -79,9 +79,9 @@ class GameState {
             const element = self.getAt(bombPoint.x, bombPoint.y);
 
             if (element === Element.BOMB_BOMBERMAN) {
-                return new Bomb(-1, bombPoint.x, bombPoint.y, self.hero.bombsPower, 5);
+                return new Bomb(-1, bombPoint.x, bombPoint.y, self.hero.bombsPower, 4);
             } else if (element === Element.OTHER_BOMB_BOMBERMAN) {
-                const bomb = new Bomb(-1, bombPoint.x, bombPoint.y, 3, 5);
+                const bomb = new Bomb(-1, bombPoint.x, bombPoint.y, 3, 4);
                 const playerIdx = self.players.findIndex(pl => pl.equals(bombPoint));
 
                 if (playerIdx > -1) {
@@ -118,7 +118,7 @@ class GameState {
     updateBoard(boardString) {
         this[boardSymbol] = boardString;
         this.destroyableWalls = this.findAll(Element.DESTROYABLE_WALL);
-        this.meatChoppers = this.findAll(Element.MEAT_CHOPPER);
+        this.meatChoppers = this.findAll(Element.MEAT_CHOPPER).concat(this.findAll(Element.DEAD_MEAT_CHOPPER));
 
         this.players.forEach((player, playerID) => {
             if (player.alive) {
@@ -169,16 +169,36 @@ class GameState {
                     const radiusIncrease = this.perks[Element.BOMB_BLAST_RADIUS_INCREASE].find(rad => player.equals(rad));
                     if (radiusIncrease) {
                         player.bombsPower += settings.perkBombBlastRadiusInc;
+                        player.bombsPowerTime += settings.timeoutBombCountInc;
+                    }
+                    if (player.bombsPowerTime > 0) {
+                        player.bombsPowerTime --;
+                    } else {
+                        player.bombsPower = settings.bombPower;
                     }
 
                     const countIncrease = this.perks[Element.BOMB_COUNT_INCREASE].find(rad => player.equals(rad));
                     if (countIncrease) {
-                        player.bombsCount += settings.perkBombCountInc;
+                        player.bombsCount += 1;
+                        player.bombsCountTime += settings.timeoutBombCountInc;
+                    }
+                    if (player.bombsCountTime > 0) {
+                        player.bombsCountTime --;
+                    } else {
+                        player.bombsCount = 1;
                     }
 
                     const bombImmune = this.perks[Element.BOMB_IMMUNE].find(rad => player.equals(rad));
                     if (bombImmune) {
-                        player.immune += settings.perkPickTimeout;
+                        player.immuneTime += settings.timeoutBombImmune;
+                    }
+                    if (player.immuneTime) {
+                        player.immuneTime--;
+                    }
+
+                    const bombRC = this.perks[Element.BOMB_REMOTE_CONTROL].find(rad => player.equals(rad));
+                    if (bombRC) {
+                        player.rcBombTime += 1;
                     }
                 }
                 else {
@@ -283,9 +303,9 @@ class GameState {
                 }
                 return false;
             }
-            if (bomb.timer !== 5) {
+            // if (bomb.timer !== 5) {
                 bomb.timer--;
-            }
+            // }
             return true;
         });
     }

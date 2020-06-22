@@ -14,6 +14,11 @@ const activeActors = [
     Element.MEAT_CHOPPER
 ];
 
+
+function copyAsIs(a) {
+    return a;
+}
+
 function setCharAt(str, index, chr) {
     if (index > str.length - 1) return str;
     return str.substr(0, index) + chr + str.substr(index + 1);
@@ -206,32 +211,47 @@ class Board {
             });
 
             this.meatChoppers.forEach(ch => {
-                this._walkMatrix[ch.y][ch.x] += 15;
+                this._walkMatrix[ch.y][ch.x] = 999;
 
                 DirectionList.forEach(dir => {
                     const currentPoint = dir.nextPoint(ch);
                     if (!someWall.some(w => w.equals(currentPoint))) {
-                        this._walkMatrix[currentPoint.y][currentPoint.x] += 20;
+                        this._walkMatrix[currentPoint.y][currentPoint.x] += 40;
                     }
                 })
             });
 
+            this.players.forEach(player => {
+                this._walkMatrix[player.y][player.x] = 100;
+            });
+
             this.bombs.forEach(bomb => {
-                this._walkMatrix[bomb.y][bomb.x] = 25 + (5 - bomb.timer);
+                this._walkMatrix[bomb.y][bomb.x] = 0;
 
                 DirectionList.forEach(dir => {
                     var currentPoint = dir.nextPoint(bomb);
-                    var d = bomb.power;
-                    for (var d = 1; d <= bomb.power; d++) {
-                        if (someWall.some(w => w.equals(currentPoint))) {
-                            this._walkMatrix[currentPoint.y][currentPoint.x] += 100 + (5 - bomb.timer) - d;
-                            break;
-                        } else {
-                            this._walkMatrix[currentPoint.y][currentPoint.x] += 25 + (5 - bomb.timer) - d;
-                            currentPoint = dir.nextPoint(currentPoint);
-                        }
-                    }
 
+                    for (var d = 1; d <= bomb.power; d++) {
+                        if (
+                            someWall.some(w => w.equals(currentPoint)) ||
+                            this.bombs.some(b => b.equals(currentPoint)) ||
+                            this.meatChoppers.some(b => b.equals(currentPoint))
+                        ) {
+                            this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
+                            break;
+                        } else if (bomb.timer === 1) {
+                            this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
+                        } else if (this._walkMatrix[currentPoint.y][currentPoint.x] !== 0) {
+                            this._walkMatrix[currentPoint.y][currentPoint.x] += 25 + (5 - bomb.timer) - d;
+                        }
+                        DirectionList.forEach(dir => {
+                            const wall = dir.nextPoint(currentPoint);
+                            if (this.destroyableWalls.some(w => w.equals(wall))) {
+                                this._walkMatrix[wall.y][wall.x] = 0;
+                            }
+                        })
+                        currentPoint = dir.nextPoint(currentPoint);
+                    }
                 })
             });
         }
@@ -285,27 +305,18 @@ class Board {
             this.rows = oldBoard.rows;
         } else {
             this.size = gameState.size;
-            this.walls = gameState.walls.map(wl => new Point(wl.x, wl.y));
-            this.destroyableWalls = gameState.destroyableWalls.map(wl => new Point(wl.x, wl.y));
-            this.bombs = gameState.bombs.map(bomb => new Bomb(bomb.owner, bomb.x, bomb.y, bomb.power, bomb.timer));
-            this.meatChoppers = gameState.meatChoppers.map(ch => new Point(ch.x, ch.y));
+            this.walls = gameState.walls.map(copyAsIs);
+            this.destroyableWalls = gameState.destroyableWalls.map(copyAsIs);
+            this.bombs = gameState.bombs.map(copyAsIs);
+            this.meatChoppers = gameState.meatChoppers.map(copyAsIs);
 
-            this.hero = new Player(
-                gameState.hero.x,
-                gameState.hero.y,
-                gameState.hero.bombsCount,
-                gameState.hero.bombsPower,
-            )
-            this.players = gameState.players.map(pl => new Player(
-                pl.x,
-                pl.y,
-                pl.bombsCount,
-                pl.bombsPower
-            ));
+            this.hero = gameState.hero;
+
+            this.players = gameState.players.filter(p => p.alive).map(copyAsIs);
 
             this.perks = {};
             Object.keys(gameState.perks).forEach(perkType => {
-                this.perks[perkType] = gameState.perks[perkType].map(wl => new Point(wl.x, wl.y))
+                this.perks[perkType] = gameState.perks[perkType].map(copyAsIs)
             })
         }
     }
