@@ -122,9 +122,15 @@ function connect() {
             connect();
         }, 5000);
     });
-
+    let wait = false;
     ws.on('message', function (message) {
-        processBoard(JSON.parse(message.toString()));
+        if (!wait) {
+            wait = true;
+            requestAnimationFrame(() => {
+                wait = false;
+                processBoard(JSON.parse(message.toString()));
+            })
+        }
     });
 }
 

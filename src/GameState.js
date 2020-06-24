@@ -174,7 +174,7 @@ class GameState {
 
                     const countIncrease = this.perks[Element.BOMB_COUNT_INCREASE].find(rad => player.equals(rad));
                     if (countIncrease) {
-                        player.bombsCount += settings.perkBombCountInc;
+                        player.bombsCount = 3;
                         player.bombsCountTime += settings.timeoutBombCountInc;
                     }
 
@@ -259,7 +259,7 @@ class GameState {
 
                     const countIncrease = this.perks[Element.BOMB_COUNT_INCREASE].find(rad => player.equals(rad));
                     if (countIncrease) {
-                        player.bombsCount += settings.perkBombCountInc;
+                        player.bombsCount = 3;
                         player.bombsCountTime += settings.timeoutBombCountInc;
                     }
 

@@ -134,7 +134,9 @@ function getNearestPerk(board, hero, last) {
 }
 
 function getNearestPlayer(board, hero, last = false) {
-    const players = board.players.filter(p => p.alive).map(ch => ({
+    var aliveCount = board.players.filter(p => p.alive).length;
+
+    const players = board.players.filter(p => p.alive).concat(aliveCount < 3 ? board.meatChoppers : []).map(ch => ({
         player: ch,
         path: getPaths(board, hero, ch)
     })).filter(p => p.path && p.path.length && p.path[1])

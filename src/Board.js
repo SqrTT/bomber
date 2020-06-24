@@ -355,7 +355,7 @@ class Board {
             .concat(
                 this.perks[Element.BOMB_COUNT_INCREASE],
                 this.perks[Element.BOMB_IMMUNE],
-                this.perks[Element.BOMB_REMOTE_CONTROL]
+                //this.perks[Element.BOMB_REMOTE_CONTROL]
             )
     }
     removeBlasts() {
