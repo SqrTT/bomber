@@ -65,9 +65,6 @@ function getPaths(board, fromPT, toPt) {
 
 exports.getPaths = getPaths;
 
-function hasExit(board, pos) {
-    return 1 < board.countElementsAroundPt(pos, board.getBarriers());
-}
 
 exports.calc = function (data) {
     const board = new Board(data.gameState);
@@ -75,18 +72,22 @@ exports.calc = function (data) {
     const hero = board.getHero();
 
     data.scores = board.toWalkMatrix();
-
-
-    /// step
-    let shortDistance = getNearestPlayer(board, hero) || getNearestChopper(board, hero) || getNearestPerk(board, hero);
-
-    if (!shortDistance) {
-        return 'ACT';
+    let usePerk;
+    const perk = getNearestPerk(board, hero);
+    if (perk && perk.path.length < 10) {
+        usePerk = perk;
     }
 
-    if (shortDistance.path.length < (hero.bombsPower + 2) && hero.bombsCount < 1) {
+    /// step
+    let shortDistance = usePerk || getNearestPlayer (board, hero) || getNearestChopper(board, hero) || getNearestPerk(board, hero);
+
+    if (!shortDistance) {
+        return 'STOP';
+    }
+
+    if (shortDistance.path.length < (hero.bombsPower + 1) &&  hero.bombsCount < 1) {
         // find next bomber
-        shortDistance = getNearestPlayer(board, hero, 1) || getNearestChopper(board, hero, 1) || getNearestPerk(board, hero, 1);
+        shortDistance = getNearestPlayer(board, hero, true) || getNearestChopper(board, hero, true) || getNearestPerk(board, hero, true);
     }
     if (!shortDistance) {
         return 'ACT';
@@ -120,32 +121,38 @@ exports.calc = function (data) {
 
     return data.action;
 }
-function getNearestPerk(board, hero, n = 0) {
-    return board.getUsefulPerks().map(ch => ({
-        ch: ch,
+function getNearestPerk(board, hero, last) {
+    const perks = board.getUsefulPerks().map(ch => ({
+        perk: ch,
         path: getPaths(board, hero, ch)
     })).filter(p => p.path && p.path.length && p.path[1])
         .sort((a, b) => {
             return a.path.length - b.path.length;
-        })[n];
+        });
+
+    return perks[last ? perks.length - 1: 0];
 }
 
-function getNearestPlayer(board, hero, n = 0) {
-    return board.players.filter(p => p.alive).map(ch => ({
+function getNearestPlayer(board, hero, last = false) {
+    const players = board.players.filter(p => p.alive).map(ch => ({
         player: ch,
-        path: ch.alive && getPaths(board, hero, ch)
+        path: getPaths(board, hero, ch)
     })).filter(p => p.path && p.path.length && p.path[1])
         .sort((a, b) => {
             return a.path.length - b.path.length;
-        })[n];
+        });
+
+    return players[last ? players.length - 1 : 0]
 }
 
-function getNearestChopper(board, hero, n = 0) {
-    return board.meatChoppers.map(ch => ({
+function getNearestChopper(board, hero, last = false) {
+    const choppers = board.meatChoppers.map(ch => ({
         ch: ch,
         path: getPaths(board, hero, ch)
     })).filter(p => p.path && p.path.length && p.path[1]).sort((a, b) => {
         return a.path.length - b.path.length;
-    })[n];
+    });
+
+    return choppers[last ? choppers.length - 1 : 0];
 }
 

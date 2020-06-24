@@ -153,7 +153,7 @@ function initCanvas() {
             if (scores) {
                 scores.forEach((row, y) => {
                     row.forEach((cel, x) => {
-                        if (cel != 0 && cel != 1)
+                        if (cel != 1)
                             canvas.drawText(cel, x, y);
                     })
                 })

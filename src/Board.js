@@ -194,6 +194,13 @@ class Board {
             skipBlasts ? [] : this.getFutureBlasts(2)
         );
     }
+    /**
+     *
+     * @param {Point} pt
+     */
+    nearHero(pt) {
+        return Math.sqrt(((pt.x - this.hero.x) ** 2) + ((pt.y - this.hero.y) ** 2)) <= 2;
+    }
     toWalkMatrix() {
         if (!this._walkMatrix) {
             this._walkMatrix = (new Array(this.size)).fill(1).map(() => {
@@ -211,12 +218,12 @@ class Board {
             });
 
             this.meatChoppers.forEach(ch => {
-                this._walkMatrix[ch.y][ch.x] = 999;
+                    this._walkMatrix[ch.y][ch.x] = this.nearHero(ch) ? 0 : 10;
 
                 DirectionList.forEach(dir => {
                     const currentPoint = dir.nextPoint(ch);
                     if (!someWall.some(w => w.equals(currentPoint))) {
-                        this._walkMatrix[currentPoint.y][currentPoint.x] += 40;
+                        this._walkMatrix[currentPoint.y][currentPoint.x] = this.nearHero(ch) ? 0 : 10;
                     }
                 })
             });
@@ -228,32 +235,34 @@ class Board {
             this.bombs.forEach(bomb => {
                 this._walkMatrix[bomb.y][bomb.x] = 0;
 
-                DirectionList.forEach(dir => {
-                    var currentPoint = dir.nextPoint(bomb);
+                if (this.hero.immuneTime < 5) {
+                    DirectionList.forEach(dir => {
+                        var currentPoint = dir.nextPoint(bomb);
 
-                    for (var d = 1; d <= bomb.power; d++) {
-                        if (
-                            someWall.some(w => w.equals(currentPoint)) ||
-                            this.bombs.some(b => b.equals(currentPoint)) ||
-                            this.meatChoppers.some(b => b.equals(currentPoint))
-                        ) {
-                            this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
-                            break;
-                        } else if (bomb.timer === 1) {
-                            this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
-                        } else if (this._walkMatrix[currentPoint.y][currentPoint.x] !== 0) {
-                            this._walkMatrix[currentPoint.y][currentPoint.x] += 25 + (5 - bomb.timer) - d;
-                        }
-                        DirectionList.forEach(dir => {
-                            const wall = dir.nextPoint(currentPoint);
-                            if (this.destroyableWalls.some(w => w.equals(wall))) {
-                                this._walkMatrix[wall.y][wall.x] = 0;
+                        for (var d = 1; d <= bomb.power; d++) {
+                            if (
+                                someWall.some(w => w.equals(currentPoint)) ||
+                                this.players.some(b => b.equals(currentPoint))
+                            ) {
+                                this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
+                                break;
+                            } else if (bomb.timer === 1) {
+                                this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
+                            } else if (this._walkMatrix[currentPoint.y][currentPoint.x] !== 0) {
+                                this._walkMatrix[currentPoint.y][currentPoint.x] += 25 + (5 - bomb.timer) - d;
                             }
-                        })
-                        currentPoint = dir.nextPoint(currentPoint);
-                    }
-                })
+                            DirectionList.forEach(dir => {
+                                const wall = dir.nextPoint(currentPoint);
+                                if (this.destroyableWalls.some(w => w.equals(wall))) {
+                                    this._walkMatrix[wall.y][wall.x] = 0;
+                                }
+                            })
+                            currentPoint = dir.nextPoint(currentPoint);
+                        }
+                    })
+                }
             });
+            this._walkMatrix[this.hero.y][this.hero.x] = 1;
         }
 
         return this._walkMatrix;
@@ -345,7 +354,8 @@ class Board {
         return this.perks[Element.BOMB_BLAST_RADIUS_INCREASE]
             .concat(
                 this.perks[Element.BOMB_COUNT_INCREASE],
-                this.perks[Element.BOMB_IMMUNE]
+                this.perks[Element.BOMB_IMMUNE],
+                this.perks[Element.BOMB_REMOTE_CONTROL]
             )
     }
     removeBlasts() {

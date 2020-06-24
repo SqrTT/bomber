@@ -2,11 +2,12 @@ const Point = require("./Point");
 const { Element } = require("./Constants");
 
 class Bomb extends Point {
-    constructor(owner, x, y, power = 3, timer = 5) {
+    constructor(owner, x, y, power = 3, timer = 5, rc = false) {
         super(x, y);
         this.owner = owner;
         this.timer = timer;
         this.power = power;
+        this.rc = rc;
     }
 
     tick() {

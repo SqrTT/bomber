@@ -58,7 +58,7 @@ describe('score calc', function () {
             gameState: b
         })
 
-        assert.equal(res, 'RIGHT');
+        assert.equal(res, 'RIGHT,ACT');
     });
 
     it('should see walls amount', function () {
@@ -67,7 +67,7 @@ describe('score calc', function () {
             action: 'RIGHT'
         })
 
-        assert.equal(res, 'RIGHT');
+        assert.equal(res, 'RIGHT,ACT');
     });
 
     const bombBoard = (`
@@ -167,7 +167,7 @@ describe('score calc', function () {
             gameState: getBoard(bombBoard),
         })
 
-        assert.equal(res, 'LEFT');
+        assert.equal(res, 'LEFT,ACT');
     });
 
     it('should way bombs 2', function () {
@@ -267,7 +267,7 @@ describe('score calc', function () {
             gameState: getBoard(bombBoard)
         })
 
-        assert.equal(res, 'ACT');
+        assert.equal(res, 'LEFT,ACT');
     });
 
     it('should det way from bomb', () => {
@@ -296,8 +296,12 @@ describe('score calc', function () {
         ☼ #     #      #      ☼
         ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
 
+        const b = getBoard(bombBoard);
+
+        b.hero.bombsCount = 0;
+
         const res = calc({
-            gameState: getBoard(bombBoard)
+            gameState: b
         })
 
         assert.equal(res, 'RIGHT');
@@ -329,8 +333,10 @@ describe('score calc', function () {
         ☼ #     #      #      ☼
         ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
 
+        const boardd = getBoard(bombBoard);
+        boardd.hero.bombsCount = 0;
         const res = calc({
-            gameState: getBoard(bombBoard)
+            gameState: boardd
         })
 
         assert.equal(res, 'DOWN');
@@ -360,7 +366,7 @@ describe('score calc', function () {
         ☼  # 3 ♥         #    ☼
         ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
         ☼            &        ☼
-        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'DOWN');
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'DOWN,ACT');
     });
     it('should det way from bomb even more', () => {
         checkBoard(`
@@ -386,7 +392,7 @@ describe('score calc', function () {
     ☼    &   ###  #   #   ☼
     ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼ ☼ ☼
     ☼#   &    #    #♠## # ☼
-    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'DOWN');
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'DOWN,ACT');
     });
 
     it('should det way from bomb even more', () => {
@@ -440,7 +446,7 @@ describe('score calc', function () {
     ☼    #         #  ##  ☼
     ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼♥☼ ☼
     ☼    &#      ##    #  ☼
-    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'LEFT');
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'LEFT,ACT');
     });
 
     it('should det way from bomb even more', () => {
@@ -467,11 +473,11 @@ describe('score calc', function () {
     ☼ # #   #   ## ##   ##☼
     ☼#☼ ☼#☼ ☼ ☼ ☼#☼#☼ ☼#☼&☼
     ☼##    #&##         # ☼
-    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'UP');
+    ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'DOWN');
     });
 
 
-    it.only('should det way from bomb even more', () => {
+    it('should det way from bomb even more', () => {
         checkBoard(`
         ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
         ☼  #     #    # #   # ☼
@@ -495,10 +501,295 @@ describe('score calc', function () {
         ☼ #    ☻             #☼
         ☼ ☼ ☼ ☼♥☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
         ☼             &     ##☼
-        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'UP', board => {
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`, 'RIGHT', board => {
             board.hero.bombsCount = 0;
         });
     });
+
+
+
+
+
+    it('Should avoid chopper', () => {
+
+
+        const bombBoard = (`
+            ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+            ☼#  i     #   #      #☼
+            ☼#☼ ☼ ☼ ☼#☼ ☼#☼ ☼ ☼ ☼ ☼
+            ☼   c      #   &###   ☼
+            ☼#☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+            ☼         ##  #  #  # ☼
+            ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼
+            ☼       #    #  ##    ☼
+            ☼ ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+            ☼            #        ☼
+            ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+            ☼### #         ♥#     ☼
+            ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+            ☼          3☺ #2      ☼
+            ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼
+            ☼  #           #  #   ☼
+            ☼#☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼
+            ☼#       # &       i  ☼
+            ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼
+            ☼##         # ##      ☼
+            ☼ ☼#☼ ☼ ☼#☼ ☼ ☼ ☼ ☼&☼ ☼
+            ☼#       ##&          ☼
+            ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+        const board = getBoard(bombBoard);
+
+        const res = calc({
+            gameState: board
+        })
+
+        assert.notEqual(res, 'RIGHT');
+        assert.notEqual(res, 'RIGHT,ACT');
+        assert.notEqual(res, 'ACT,RIGHT');
+    })
+
+
+
+    it('Should avoid bobmbbb', () => {
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼   #  ##  #    #  ###☼
+        ☼ ☼#☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼         #&         #☼
+        ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼#☼
+        ☼     #        #  #   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼   #                #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼    &♥  2 ☺          ☼
+        ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼ ☼#☼#☼
+        ☼҉҉҉҉҉҉H              ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼                     ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼                     ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼&            #    # #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼c☼ ☼#☼ ☼ ☼
+        ☼   # # # #     # ##  ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼####  ###### # #  # #☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+        const board = getBoard(bombBoard);
+
+        board.hero.bombsCount = 2;
+
+        const res = calc({
+            gameState: board
+        })
+
+        assert.notEqual(res, 'LEFT');
+    })
+
+    it('Should avoid bobmbbb', () => {
+
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼#                ####☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼#☼
+        ☼# #              # # ☼
+        ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼  c           ♠      ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼
+        ☼             #    #  ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼
+        ☼              ҉     #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼҉☼☺☼ ☼ ☼
+        ☼              ҉     #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼҉☼ ☼ ☼#☼
+        ☼            # ҉   #  ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼҉☼#☼ ☼#☼
+        ☼          #   ҉ #    ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼&☼ ☼ ☼ ☼
+        ☼ # #           #    #☼
+        ☼ ☼#☼ ☼ ☼ ☼ ☼#☼#☼ ☼ ☼#☼
+        ☼  #        #         ☼
+        ☼ ☼#☼ ☼#☼ ☼ ☼#☼ ☼ ☼ ☼ ☼
+        ☼#### # ##  #  #### # ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+        const board = getBoard(bombBoard);
+
+        board.hero.bombsCount = 1;
+
+        const res = calc({
+            gameState: board
+        })
+
+        assert.equal(res, 'DOWN,ACT');
+    })
+
+
+
+    it('Should avoid bobmbbb', () => {
+
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼    &    #    #######☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼#☼
+        ☼      #          # # ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼#         ♥ 2        ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼             #       ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼        &    # # #   ☼
+        ☼#☼ ☼ ☼☺☼#☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼        1            ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼                 #   ☼
+        ☼#☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼# #                  ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼  #   #          ##  ☼
+        ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼     #     &   ## #  ☼
+        ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#### ### # ##  ### # ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+        const board = getBoard(bombBoard);
+
+        board.hero.bombsCount = 0;
+
+        const res = calc({
+            gameState: board
+        })
+
+        assert.notEqual(res, 'DOWN');
+    })
+    it('Should avoid bobmbbb', () => {
+
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼#  #                 ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼
+        ☼          #          ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼
+        ☼     #     ##    #   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼#☼ ☼
+        ☼        #            ☼
+        ☼#☼ ☼ ☼#☼ ☼ ☼ ☼ ☼҉☼ ☼ ☼
+        ☼#  #  #     ҉҉҉҉҉҉H##☼
+        ☼ ☼ ☼#☼ ☼ ☼ ☼♥☼ ☼҉☼ ☼ ☼
+        ☼    #        ҉҉҉҉҉҉҉ ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼҉☼ ☼ ☼
+        ☼                ҉ #  ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼҉☼#☼ ☼
+        ☼                ☺&   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼              #   &  ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼   #   ##  # # # #   ☼
+        ☼#☼ ☼#☼#☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼## ##### # #   ### # ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+        const board = getBoard(bombBoard);
+
+        board.hero.bombsCount = 0;
+
+        const res = calc({
+            gameState: board
+        })
+
+        assert.equal(res, 'DOWN');
+    })
+
+
+
+    it('Should avoid bobmbbb', () => {
+
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼                ##   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼
+        ☼  #                  ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼
+        ☼        x     #   #  ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼&        2           ☼
+        ☼#☼ ☼ ☼ ☼ ☼♥☼ ☼ ☼ ☼ ☼ ☼
+        ☼#  #             #   ☼
+        ☼#☼1☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#☺            #      ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼                #    ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼#☼
+        ☼            # #  ## #☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#             &      ☼
+        ☼#☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼ ### # # ##   # #    ☼
+        ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#   ######       ### ☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+        const board = getBoard(bombBoard);
+
+        board.hero.bombsCount = 0;
+
+        const res = calc({
+            gameState: board
+        })
+
+        assert.notEqual(res, 'RIGHT');
+    })
+
+
+    it('Should avoid bobmbbb', () => {
+
+        const bombBoard = (`
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼
+        ☼    # #       ☺     #☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼ #                 # ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼ # #         ♥1      ☼
+        ☼&☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼##  #         &  #   ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼                     ☼
+        ☼ ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼#☼
+        ☼#  #                 ☼
+        ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼   #                 ☼
+        ☼ ☼ ☼ ☼#☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼                  ## ☼
+        ☼#☼&☼&☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼ ☼
+        ☼#    # #  #  # ## # #☼
+        ☼ ☼ ☼ ☼ ☼ ☼#☼#☼ ☼#☼#☼ ☼
+        ☼#             ####   ☼
+        ☼&☼ ☼ ☼ ☼ ☼ ☼#☼#☼#☼ ☼#☼
+        ☼ # # # # # #     # ##☼
+        ☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼☼`).replace(/\n +/ig, '');
+
+
+        const board = getBoard(bombBoard);
+
+        board.hero.bombsCount = 0;
+
+        const res = calc({
+            gameState: board
+        })
+
+        assert.notEqual(res, 'DOWN');
+    })
+
+
 
 
     describe('getPath', () => {

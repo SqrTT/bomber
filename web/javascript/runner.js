@@ -45,7 +45,7 @@ var printArray = function (array) {
 };
 
 function actorToStr(player) {
-    return `[${player.alive}\t${player.x}\t${player.y}\tb:${player.bombsCount}\tp:${player.bombsPower}\ti:${player.immune}]`;
+    return `[${player.alive ? 1 : 0}\t${player.x}/${player.y}\tbombs:${player.bombsCount}(${player.bombsCountTime})\tpower:${player.bombsPower}(${player.bombsPowerTime})\timmune:${player.immuneTime}\t rc: ${player.rcBombCount}]`;
 }
 
 const state = {
@@ -62,11 +62,17 @@ var processBoard = function ({ boardString, answer, gameState, parsed }) {
         });
     }
 
+
+    var logMessage = board + "\n\n";
+
+    logMessage += "Answer: " + answer + "\n";
+    logMessage += "-----------------------------------\n";
+
     if (gameState && gameState.hero) {
         const playersState = document.getElementById('playersState');
 
         if (playersState && playersState) {
-            var content = `--- tick: ${gameState._tick} state: ${state[gameState._state]} ---\n`;
+            var content = `--- tick: ${gameState._tick} state: ${state[gameState._state]} --- ${new Date()}\n`;
 
             content += `${actorToStr(gameState.hero)}\n`;
             content += `---- players \n`;
@@ -85,16 +91,12 @@ var processBoard = function ({ boardString, answer, gameState, parsed }) {
             gameState.meatChoppers.forEach((bomb) => {
                 content += `${bomb.x} \t${bomb.y}\n`;
             })
-
+            logMessage += '\n' + content;
             playersState.value = content;
         } else {
             playersState.value = '';
         }
     }
-    var logMessage = board + "\n\n";
-
-    logMessage += "Answer: " + answer + "\n";
-    logMessage += "-----------------------------------\n";
 
     log(logMessage);
 

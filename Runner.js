@@ -2,7 +2,7 @@
 
 var util = require('util');
 var WSocket = require('ws');
-const { Element, isWalkableElement } = require("./src/Constants");
+const { Element } = require("./src/Constants");
 
 const { GameState } = require("./src/GameState");
 const { GameStates, GameStatesStr } = require("./src/GameStates");
@@ -70,7 +70,29 @@ function sendToClients(data) {
 }
 
 
+var stdin = process.stdin;
+process.stdin.setRawMode && process.stdin.setRawMode(true);
 
+var nextMove = '';
+
+stdin.addListener("data", function (d) {
+    const charCode = d.toString().charCodeAt(0);
+    const char = d.toString();
+    if (charCode == 3) {
+        process.exit();
+    }
+    if (char === 'a') {
+        nextMove = 'LEFT';
+    } else if (char === 'd') {
+        nextMove = "RIGHT";
+    } else if (char === 's') {
+        nextMove = 'DOWN';
+    } else if (char === 'w') {
+        nextMove === 'UP'
+    } else if (char === ' ') {
+        nextMove = 'ACT';
+    }
+});
 
 var log = function (string) {
     console.log(string);
@@ -131,7 +153,11 @@ async function processBoard(boardString) {
         });
 
         const bestScore = result;
-        answer = result || '';
+        answer = nextMove || result || '';
+
+        if (nextMove) {
+            nextMove = '';
+        }
 
         scores = result;
 
@@ -154,8 +180,8 @@ async function processBoard(boardString) {
 
     var logMessage = boardAsString(boardString, boardSize) + "\n\n";
 
-    logMessage += "Answer: " + answer + `: ${GameStatesStr[gameState.getState()]} : ${gameState.getTick()} - time: ${Date.now() - time}\n`;
-    logMessage += `bombs: ${gameState.hero && gameState.hero.bombsCount} }\n`;
+    logMessage += "Answer: " + answer + `: ${GameStatesStr[gameState.getState()]} : ${gameState.getTick()} : ${Date.now() - time}\n`;
+    logMessage += `bombs: ${gameState.hero && gameState.hero.bombsCount} \n`;
     logMessage += "-----------------------------------\n";
 
     log(logMessage);
