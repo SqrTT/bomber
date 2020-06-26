@@ -120,6 +120,17 @@ class GameState {
         this.destroyableWalls = this.findAll(Element.DESTROYABLE_WALL);
         this.meatChoppers = this.findAll(Element.MEAT_CHOPPER).concat(this.findAll(Element.DEAD_MEAT_CHOPPER));
 
+        // check for new players
+        const playerPoints = [].concat(
+            this.findAll(Element.OTHER_BOMBERMAN),
+            this.findAll(Element.OTHER_BOMB_BOMBERMAN));
+
+        // playerPoints.forEach(p => {
+        //     if (this.players.some(e => e.equals(p))) {
+        //         this.players.push(new Player(p.x, p.y))
+        //     }
+        // })
+
         this.players.forEach((player, playerID) => {
             if (player.alive) {
                 const el = this.getAt(player.x, player.y);
@@ -203,16 +214,7 @@ class GameState {
             }
         });
 
-        // check for new players
-        const playerPoints = [].concat(
-            this.findAll(Element.OTHER_BOMBERMAN),
-            this.findAll(Element.OTHER_BOMB_BOMBERMAN));
 
-        playerPoints.forEach(p => {
-            if (this.players.every(e => !e.equals(p))) {
-                this.players.push(new Player(p.x, p.y))
-            }
-        })
 
         const processHero = (player, playerID) => {
             if (player.alive) {
@@ -305,6 +307,22 @@ class GameState {
             [Element.BOMB_BLAST_RADIUS_INCREASE]: this.findAll(Element.BOMB_BLAST_RADIUS_INCREASE)
         };
 
+        const doubleCheckBombs = (this.findAll(Element.BOMB_TIMER_1).concat(
+            this.findAll(Element.BOMB_TIMER_2),
+            this.findAll(Element.BOMB_TIMER_3),
+            this.findAll(Element.BOMB_TIMER_4),
+            this.findAll(Element.BOMB_TIMER_5)
+        ));
+
+        doubleCheckBombs.forEach(dp => {
+            if (!this.bombs.some(b => b.equals(dp))) {
+                const el = this.getAt(dp.x, dp.y);
+                this.bombs.push(new Bomb(undefined, dp.x, dp.y, undefined, Number(el), el === Element.BOMB_TIMER_5));
+            }
+        })
+
+
+
         // tick perks
         /**
          *
@@ -331,9 +349,17 @@ class GameState {
         this.players.filter(p => p.alive).forEach(tickPerks);
 
 
+        ///
+
+
         this.bombs = this.bombs.filter(bomb => {
+            const el = this.getAt(bomb.x, bomb.y);
             if (!bomb.rc) {
                 bomb.timer--;
+                // sync timer
+                if ([Element.BOMB_TIMER_1, Element.BOMB_TIMER_2, Element.BOMB_TIMER_3, Element.BOMB_TIMER_4].includes(el)) {
+                    bomb.timer = Number(el);
+                }
                 const isBombActive = bomb.timer > 0;
 
                 if (!isBombActive) {
@@ -345,7 +371,7 @@ class GameState {
                 }
                 return isBombActive;
             } else {
-                const el = this.getAt(bomb.x, bomb.y);
+
                 if (
                     el !== Element.MEAT_CHOPPER
                     && el !== Element.OTHER_BOMB_BOMBERMAN

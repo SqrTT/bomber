@@ -13,7 +13,7 @@ class Player extends Point {
         this.rcBombCount = 0;
     }
     equals(o) {
-        return this === o || (this.alive && o.x === this.x && o.y === this.y);
+        return (this.alive && o.x === this.x && o.y === this.y);
     }
     equalsTo(x, y) {
         return this.alive && x === this.x && y === this.y;

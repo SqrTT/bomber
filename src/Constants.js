@@ -68,8 +68,8 @@ const bombers = [
 exports.isBomber = (char) => bombers.includes(char);
 
 const otherBombers = [
-    Element.BOMB_BOMBERMAN,
-    Element.BOMBERMAN,
+    // Element.BOMB_BOMBERMAN,
+    // Element.BOMBERMAN,
     Element.OTHER_BOMB_BOMBERMAN,
     Element.OTHER_BOMBERMAN
 ]

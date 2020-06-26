@@ -248,7 +248,8 @@ class Board {
                             for (var d = 1; d <= bomb.power; d++) {
                                 if (
                                     someWall.some(w => w.equals(currentPoint)) ||
-                                    this.players.some(b => b.equals(currentPoint))
+                                    this.players.some(b => b.equals(currentPoint)) ||
+                                    this.meatChoppers.some(b => b.equals(currentPoint))
                                 ) {
                                     walkMatrix[currentPoint.y][currentPoint.x] = 0;
                                     break;
@@ -322,6 +323,7 @@ class Board {
             this.size = oldBoard.size;
             this.rows = oldBoard.rows;
         } else {
+            this.gameState = gameState;
             this._walkMatrix = new Map();
             this.size = gameState.size;
             this.walls = gameState.walls.map(copyAsIs);
