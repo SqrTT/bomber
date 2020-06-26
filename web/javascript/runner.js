@@ -80,10 +80,10 @@ var processBoard = function ({ boardString, answer, gameState, parsed }) {
             gameState.players.forEach((player) => {
                 content += `${actorToStr(player)}\n`;
             })
-            content += `---- bombs \n`;
+            content += `---- bombs: ${gameState.bombs.length}\n`;
 
             gameState.bombs.forEach((bomb) => {
-                content += `${bomb.timer} \t${bomb.x} \t${bomb.y}\t${bomb.power}\n`;
+                content += `${bomb.timer}\t${bomb.owner}\t${bomb.x}/${bomb.y}\tp:${bomb.power}\trc:${bomb.rc}\n`;
             })
 
             content += `---- meatChoppers \n`;

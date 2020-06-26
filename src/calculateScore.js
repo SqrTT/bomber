@@ -1,7 +1,9 @@
 const { Board } = require("./Board");
 const { Direction, Element, getCommandByCoord, DirectionList } = require("./Constants");
 const Point = require("./Point");
-const {default: AStar} = require('dynamic-astar');
+const { default: AStar } = require('dynamic-astar');
+const { GameState } = require("./GameState");
+const Bomb = require("./Bomb");
 
 
 // function getPaths(board, fromPT, toPt) {
@@ -17,34 +19,35 @@ function estimation(x, y, finish) {
     return Math.abs(x - finish.x) + Math.abs(y - finish.y);
 }
 
-function buildNode(x, y, fromNode, cost = 1) {
+function buildNode(x, y, fromNode, cost = 1, step = 0) {
     return {
         id: `${x}-${y}`,
         cost: fromNode.cost + cost,
         costEstimation: estimation(x, y, fromNode.finish),
         x: x,
         y: y,
+        step,
         finish: fromNode.finish,
     };
 }
 
 function getPaths(board, fromPT, toPt) {
-    const matrix = board.toWalkMatrix();
 
     function getNeighbors(node) {
+        const matrix = board.toWalkMatrix(node.step);
         const x = node.x, y = node.y;
         const nodes = [];
-        if (x > 0 && matrix[y][x -1]) {
-            nodes.push(buildNode(x - 1, y, node, matrix[y][x -1]));
+        if (x > 0 && matrix[y][x - 1]) {
+            nodes.push(buildNode(x - 1, y, node, matrix[y][x - 1], node.step + 1));
         }
         if (y > 0 && matrix[y - 1][x]) {
-            nodes.push(buildNode(x, y - 1, node, matrix[y - 1][x]));
+            nodes.push(buildNode(x, y - 1, node, matrix[y - 1][x], node.step + 1));
         }
         if (node.x + 1 < board.size && matrix[y][x + 1]) {
-            nodes.push(buildNode(x + 1, y, node, matrix[y][x + 1]));
+            nodes.push(buildNode(x + 1, y, node, matrix[y][x + 1], node.step + 1));
         }
         if (node.y + 1 < board.size && matrix[y + 1][x]) {
-            nodes.push(buildNode(x, y + 1, node, matrix[y + 1][x]));
+            nodes.push(buildNode(x, y + 1, node, matrix[y + 1][x], node.step + 1));
         }
         return nodes;
     }
@@ -55,6 +58,7 @@ function getPaths(board, fromPT, toPt) {
         x: fromPT.x,
         y: fromPT.y,
         cost: 0,
+        step: 0,
         costEstimation: estimation(0, 6, target),
         finish: target,
     };
@@ -67,25 +71,29 @@ exports.getPaths = getPaths;
 
 
 exports.calc = function (data) {
+    /**
+     * @type {GameState}
+     */
+    const gameState = data.gameState
     const board = new Board(data.gameState);
 
     const hero = board.getHero();
 
-    data.scores = board.toWalkMatrix();
+    data.scores = board.toWalkMatrix(0);
     let usePerk;
     const perk = getNearestPerk(board, hero);
-    if (perk && perk.path.length < 10) {
+    if (perk && perk.path.length < 15) {
         usePerk = perk;
     }
 
     /// step
-    let shortDistance = usePerk || getNearestPlayer (board, hero) || getNearestChopper(board, hero) || getNearestPerk(board, hero);
+    let shortDistance = usePerk || getNearestPlayer(board, hero) || getNearestChopper(board, hero) || getNearestPerk(board, hero);
 
     if (!shortDistance) {
         return 'STOP';
     }
 
-    if (shortDistance.path.length < (hero.bombsPower + 1) &&  hero.bombsCount < 1) {
+    if (shortDistance.path.length < (hero.bombsPower + 1) && hero.bombsCount < 1) {
         // find next bomber
         shortDistance = getNearestPlayer(board, hero, true) || getNearestChopper(board, hero, true) || getNearestPerk(board, hero, true);
     }
@@ -97,27 +105,50 @@ exports.calc = function (data) {
     data.action = next.name;
 
     data.nextPath = shortDistance.path;
+    const nextHeroPos = next.nextPoint(hero);
 
-    // data.action
+    // has rc bomb
+    const rcBomb = board.bombs.find(bomb => bomb.owner === -1 && bomb.rc);
+    if (rcBomb) {
+        // is next step safe from rc bomb?
+        const someWall = board.walls.concat(board.destroyableWalls);
+        const isHeroOnTheWay = DirectionList.some(dir => {
+            var currentPoint = dir.nextPoint(rcBomb);
 
-    if (hero.bombsCount > 0) {
-        const scores = board.getScoresBoard();
-        const nextHeroDir = Direction[next];
-
-        if (nextHeroDir) {
-            const nextHero = nextHeroDir.nextPoint(hero);
-            const currentScore = scores[nextHero.y][nextHero.x];
-
-            const scoresAround = DirectionList.map(dir => {
-                const pt = dir.nextPoint(nextHero);
-                return scores[pt.y][pt.x];
-            });
-            if (scoresAround.some(a => a < currentScore )) {
-                data.action =  data.action + ',ACT';
+            for (var d = 1; d <= rcBomb.power; d++) {
+                if (
+                    someWall.some(w => w.equals(currentPoint)) ||
+                    board.players.some(b => b.equals(currentPoint)) ||
+                    board.meatChoppers.some(b => b.equals(currentPoint))
+                ) {
+                    break;
+                } else if (nextHeroPos.equals(currentPoint)) {
+                    return true;
+                }
+                currentPoint = dir.nextPoint(currentPoint);
             }
-        }
+            return false;
+        })
 
+        if (!isHeroOnTheWay) {
+            data.action = data.action + ',ACT'; // make step and blow
+        }
+    } else if (hero.bombsCount > 0 && !board.perks[Element.BOMB_REMOTE_CONTROL].some(rc => rc.equals(nextHeroPos))) {
+        const scores = board.getScoresBoard();
+
+        const currentScore = scores[hero.y][hero.x];
+        const newScore = scores[nextHeroPos.y][nextHeroPos.x];
+
+        if (newScore > currentScore) {
+            data.action = data.action + ',ACT';
+        } else if (newScore < currentScore) {
+            data.action = 'ACT,' + data.action;
+            gameState.bombs.push(new Bomb(-1, hero.x, hero.y, hero.bombsPower, undefined, hero.rcBombCount > 0));
+            hero.rcBombCount && hero.rcBombCount--;
+            hero.bombsCount && hero.bombsCount--;
+        }
     }
+
 
     return data.action;
 }
@@ -130,7 +161,7 @@ function getNearestPerk(board, hero, last) {
             return a.path.length - b.path.length;
         });
 
-    return perks[last ? perks.length - 1: 0];
+    return perks[last ? perks.length - 1 : 0];
 }
 
 function getNearestPlayer(board, hero, last = false) {

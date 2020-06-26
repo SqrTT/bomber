@@ -127,8 +127,11 @@ class GameState {
                     if (el === Element.OTHER_BOMB_BOMBERMAN) {
                         const existingBomb = this.bombs.find(bomb => bomb.equals(player));
                         if (!existingBomb) {
-                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower));
+                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower, undefined, player.rcBombCount > 0));
                             player.bombsCount--;
+                            if (player.rcBombCount > 0) {
+                                player.rcBombCount--
+                            }
                         }
                     }
                     return;
@@ -136,8 +139,11 @@ class GameState {
                 if (isBomb(el)) {
                     const existingBomb = this.bombs.find(bomb => player.equals(bomb));
                     if (!existingBomb) {
-                        this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower));
+                        this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower, undefined, player.rcBombCount > 0));
                         player.bombsCount--;
+                        if (player.rcBombCount > 0) {
+                            player.rcBombCount--
+                        }
                     }
                 }
 
@@ -160,8 +166,11 @@ class GameState {
                         const existingBomb = this.bombs.find(bomb => player.equals(bomb));
 
                         if (!existingBomb) {
-                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower));
+                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower, undefined, player.rcBombCount > 0));
                             player.bombsCount--;
+                            if (player.rcBombCount > 0) {
+                                player.rcBombCount--
+                            }
                         }
                     }
 
@@ -212,8 +221,11 @@ class GameState {
                     if (el === Element.BOMB_BOMBERMAN) {
                         const existingBomb = this.bombs.find(bomb => bomb.equals(player));
                         if (!existingBomb) {
-                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower));
+                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower, undefined, player.rcBombCount > 0));
                             player.bombsCount--;
+                            if (player.rcBombCount > 0) {
+                                player.rcBombCount--
+                            }
                         }
                     }
                     return;
@@ -221,8 +233,11 @@ class GameState {
                 if (isBomb(el)) {
                     const existingBomb = this.bombs.find(bomb => player.equals(bomb));
                     if (!existingBomb) {
-                        this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower));
+                        this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower, undefined, player.rcBombCount > 0));
                         player.bombsCount--;
+                        if (player.rcBombCount > 0) {
+                            player.rcBombCount--
+                        }
                     }
                 }
 
@@ -245,8 +260,11 @@ class GameState {
                         const existingBomb = this.bombs.find(bomb => player.equals(bomb));
 
                         if (!existingBomb) {
-                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower));
+                            this.bombs.push(new Bomb(playerID, player.x, player.y, player.bombsPower, undefined, player.rcBombCount > 0));
                             player.bombsCount--;
+                            if (player.rcBombCount > 0) {
+                                player.rcBombCount--
+                            }
                         }
                     }
 
@@ -322,13 +340,18 @@ class GameState {
                     if (bomb.owner === -1) {
                         this.hero.bombsCount++;
                     } else {
-                        bomb.owner && this.players[bomb.owner].bombsCount++;
+                        bomb.owner !== undefined && this.players[bomb.owner].bombsCount++;
                     }
                 }
                 return isBombActive;
             } else {
                 const el = this.getAt(bomb.x, bomb.y);
-                if (el !== Element.OTHER_BOMB_BOMBERMAN && el !== Element.BOMB_BOMBERMAN && !isBomb(el)) {
+                if (
+                    el !== Element.MEAT_CHOPPER
+                    && el !== Element.OTHER_BOMB_BOMBERMAN
+                    && el !== Element.BOMB_BOMBERMAN
+                    && el !== Element.BOMB_TIMER_5
+                ) {
                     if (bomb.owner === -1) {
                         this.hero.bombsCount++;
                     } else {

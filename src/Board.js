@@ -14,7 +14,10 @@ const activeActors = [
     Element.MEAT_CHOPPER
 ];
 
-
+/**
+ * @template T
+ * @param {T} a
+ */
 function copyAsIs(a) {
     return a;
 }
@@ -158,9 +161,9 @@ class Board {
                 }
             });
 
-            this.getUsefulPerks().forEach(perk => {
-                scoresBoard[perk.y][perk.x] += settings.usePerkScore;
-            });
+            // this.getUsefulPerks().forEach(perk => {
+            //     scoresBoard[perk.y][perk.x] += settings.usePerkScore;
+            // });
 
             // negative scores
             // this.bombs.forEach(bomb => {
@@ -201,71 +204,77 @@ class Board {
     nearHero(pt) {
         return Math.sqrt(((pt.x - this.hero.x) ** 2) + ((pt.y - this.hero.y) ** 2)) <= 2;
     }
-    toWalkMatrix() {
-        if (!this._walkMatrix) {
-            this._walkMatrix = (new Array(this.size)).fill(1).map(() => {
+    toWalkMatrix(step = 0) {
+        if (!this._walkMatrix.has(step)) {
+            const walkMatrix = (new Array(this.size)).fill(1).map(() => {
                 return (new Array(this.size)).fill(1);
             });
 
             this.walls.forEach(bar => {
-                this._walkMatrix[bar.y][bar.x] = 0;
+                walkMatrix[bar.y][bar.x] = 0;
             });
 
             const someWall = this.walls.concat(this.destroyableWalls);
 
             this.destroyableWalls.forEach(bar => {
-                this._walkMatrix[bar.y][bar.x] = 8;
+                walkMatrix[bar.y][bar.x] = 8;
             });
 
             this.meatChoppers.forEach(ch => {
-                    this._walkMatrix[ch.y][ch.x] = this.nearHero(ch) ? 0 : 10;
+                walkMatrix[ch.y][ch.x] = this.nearHero(ch) ? 0 : 20;
 
                 DirectionList.forEach(dir => {
                     const currentPoint = dir.nextPoint(ch);
                     if (!someWall.some(w => w.equals(currentPoint))) {
-                        this._walkMatrix[currentPoint.y][currentPoint.x] = this.nearHero(ch) ? 0 : 10;
+                        walkMatrix[currentPoint.y][currentPoint.x] = this.nearHero(ch) ? 0 : 6;
                     }
                 })
             });
 
             this.players.forEach(player => {
-                this._walkMatrix[player.y][player.x] = 100;
+                walkMatrix[player.y][player.x] = 100;
             });
 
             this.bombs.forEach(bomb => {
-                this._walkMatrix[bomb.y][bomb.x] = 0;
+                const bombTime = bomb.timer === 5 ? 5 : Math.max(bomb.timer - step, 0);
 
-                if (this.hero.immuneTime < 5) {
-                    DirectionList.forEach(dir => {
-                        var currentPoint = dir.nextPoint(bomb);
+                if (bombTime) {
+                    walkMatrix[bomb.y][bomb.x] = 0;
 
-                        for (var d = 1; d <= bomb.power; d++) {
-                            if (
-                                someWall.some(w => w.equals(currentPoint)) ||
-                                this.players.some(b => b.equals(currentPoint))
-                            ) {
-                                this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
-                                break;
-                            } else if (bomb.timer === 1) {
-                                this._walkMatrix[currentPoint.y][currentPoint.x] = 0;
-                            } else if (this._walkMatrix[currentPoint.y][currentPoint.x] !== 0) {
-                                this._walkMatrix[currentPoint.y][currentPoint.x] += 25 + (5 - bomb.timer) - d;
-                            }
-                            DirectionList.forEach(dir => {
-                                const wall = dir.nextPoint(currentPoint);
-                                if (this.destroyableWalls.some(w => w.equals(wall))) {
-                                    this._walkMatrix[wall.y][wall.x] = 0;
+                    if ((this.hero.immuneTime - step) < 4) {
+                        DirectionList.forEach(dir => {
+                            var currentPoint = dir.nextPoint(bomb);
+
+                            for (var d = 1; d <= bomb.power; d++) {
+                                if (
+                                    someWall.some(w => w.equals(currentPoint)) ||
+                                    this.players.some(b => b.equals(currentPoint))
+                                ) {
+                                    walkMatrix[currentPoint.y][currentPoint.x] = 0;
+                                    break;
+                                } else if (bombTime === 1) {
+                                    walkMatrix[currentPoint.y][currentPoint.x] = 0;
                                 }
-                            })
-                            currentPoint = dir.nextPoint(currentPoint);
-                        }
-                    })
+                                DirectionList.forEach(dir => {
+                                    const wall = dir.nextPoint(currentPoint);
+                                    if (
+                                        this.destroyableWalls.some(w => w.equals(wall)) ||
+                                        this.players.some(b => b.equals(wall))
+                                    ) {
+                                        walkMatrix[wall.y][wall.x] = 0;
+                                    }
+                                })
+                                currentPoint = dir.nextPoint(currentPoint);
+                            }
+                        })
+                    }
                 }
             });
-            this._walkMatrix[this.hero.y][this.hero.x] = 1;
+            walkMatrix[this.hero.y][this.hero.x] = 1;
+            this._walkMatrix.set(step, walkMatrix);
         }
 
-        return this._walkMatrix;
+        return this._walkMatrix.get(step);
     }
 
     getFutureBlasts(time = 1) {
@@ -313,6 +322,7 @@ class Board {
             this.size = oldBoard.size;
             this.rows = oldBoard.rows;
         } else {
+            this._walkMatrix = new Map();
             this.size = gameState.size;
             this.walls = gameState.walls.map(copyAsIs);
             this.destroyableWalls = gameState.destroyableWalls.map(copyAsIs);
@@ -355,7 +365,7 @@ class Board {
             .concat(
                 this.perks[Element.BOMB_COUNT_INCREASE],
                 this.perks[Element.BOMB_IMMUNE],
-                //this.perks[Element.BOMB_REMOTE_CONTROL]
+                this.perks[Element.BOMB_REMOTE_CONTROL]
             )
     }
     removeBlasts() {
