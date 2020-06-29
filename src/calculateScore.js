@@ -1,5 +1,5 @@
 const { Board } = require("./Board");
-const { Direction, Element, getCommandByCoord, DirectionList, isWalkableElement, isBomb } = require("./Constants");
+const { Direction, Element, getCommandByCoord, DirectionList, isWalkableElement, isBomb, range } = require("./Constants");
 const Point = require("./Point");
 const { default: AStar } = require('dynamic-astar');
 const { GameState } = require("./GameState");
@@ -135,43 +135,76 @@ exports.calc = function (data) {
 
     const hero = board.getHero();
 
-    data.scores = board.toWalkMatrix(0);
-    let usePerk;
-    const perk = getNearestPerk(board, hero);
-    if (perk && perk.path.length < 15) {
-        usePerk = perk;
-    }
+    const score = board.getScoresBoard();
+    data.scores = score;
+    const [dist, par] = board.bfs(hero.x, hero.y);
 
-    let useWall;
-    if (!usePerk && hero.bombsCount === 1) {
-        const wl = getBetterWall(board);
-        if (wl && wl.length) {
-            useWall = {
-                path: wl
-            };
+    let best = -1;
+    let tx,ty,tt;
+    let next_bomb = board.nextHeroBombAvailable()
+    // Choose best target using ratio score/distance
+    for (const j of range(0, board.size)) {
+        for (const i of range(0, board.size)) {
+            if (score[j][i] < 0) {
+                continue
+            }
+            for (const t of range(1, 7)) {
+                if (dist[j][i][t] < 0 || dist[j][i][t] > 1e8) {
+                    continue
+                }
+                let sc = score[j][i];
+
+                if (t < next_bomb) { // # I can't place bomb earlier
+                    sc = (sc % 10) // 5 * 5  # Count only perk
+                }
+                if (dist[j][i][t] > 1000) { //  # If I am close to die I can only think about surviving.
+                    sc = 0
+                }
+                let cur = sc / (dist[j][i][t] + 1)
+                if (cur > best && board.canSurvive(i, j, t, score)) {
+                    best = cur
+                    tx = i
+                    ty = j
+                    tt = t
+                }
+            }
+        }
+    }
+    let nextDir = Direction.STOP;
+    const nextPath = [];
+    data.nextPath = nextPath;
+    const Tx = tx;
+    const Ty = ty;
+    const Tt = tt;
+
+    if (best > 0) {
+        // Tx, Ty, Tt = tx, ty, tt
+        let ptx = tx;
+        let pty = ty;
+        let ptt = tt;
+
+        while (tx != hero.x || ty != hero.y || tt != 0) {  // # Looking for next point on the way to target
+            nextPath.push([tx, ty]);
+            ptx = tx;
+            pty = ty;
+            ptt = ptt;
+            ([ty, tx, tt] = par[ty][tx][tt])
+        }
+       // print(f'Target {Tx} {Ty} {Tt} {dist[Tx][Ty][Tt]} {score[Tx][Ty]} {dist[ptx][pty][1]}')
+
+        if (ptx < tx) {
+            nextDir = Direction.LEFT;
+        } else if (ptx > tx) {
+            nextDir = Direction.RIGHT;
+        } else if (pty < ty) {
+            nextDir = Direction.UP;
+        } else if (pty > ty) {
+            nextDir = Direction.DOWN
         }
     }
 
-    /// step
-    let shortDistance = usePerk || useWall || getNearestPlayer(board, hero) || getNearestChopper(board, hero) || getNearestPerk(board, hero);
-
-    if (!shortDistance) {
-        return 'STOP';
-    }
-
-    if (shortDistance.path.length < (hero.bombsPower + 1) && hero.bombsCount < 1) {
-        // find next bomber
-        shortDistance = getNearestPlayer(board, hero, true) || getNearestChopper(board, hero, true) || getNearestPerk(board, hero, true);
-    }
-    if (!shortDistance) {
-        return 'ACT';
-    }
-
-    const next = getCommandByCoord(hero.x, hero.y, shortDistance.path[1][0], shortDistance.path[1][1]);
-    data.action = next.name;
-
-    data.nextPath = shortDistance.path;
-    const nextHeroPos = next.nextPoint(hero);
+    const nextHeroPos = nextDir.nextPoint(hero);
+    data.action = nextDir.name;
 
     // has rc bomb
     const rcBomb = board.bombs.find(bomb => bomb.owner === -1 && bomb.rc);
@@ -199,19 +232,9 @@ exports.calc = function (data) {
         if (!isHeroOnTheWay) {
             data.action = data.action + ',ACT'; // make step and blow
         }
-    } else if (hero.bombsCount > 0 && !board.perks[Element.BOMB_REMOTE_CONTROL].some(rc => rc.equals(nextHeroPos))) {
-        const scores = board.getScoresBoard();
-
-        const currentScore = scores[hero.y][hero.x];
-        const newScore = scores[nextHeroPos.y][nextHeroPos.x];
-
-        if (newScore > currentScore && isAsideNotPerk(board)(nextHeroPos)) {
-            data.action = data.action + ',ACT';
-        } else if (false && newScore < currentScore) {
-            data.action = 'ACT,' + data.action;
-            gameState.bombs.push(new Bomb(-1, hero.x, hero.y, hero.bombsPower, undefined, hero.rcBombCount > 0));
-            hero.rcBombCount && hero.rcBombCount--;
-            hero.bombsCount && hero.bombsCount--;
+    } else if (hero.bombsCount > 0) {
+        if (Tt <= 1 && score[Ty][Tx] > 0 && score[Ty][Tx] != 5 && (score[Ty][Tx] >= 15 || !board.canKillPerk(new Point(Tx, Ty))) && board.canSurvive(Tx, Ty, 1, score)) {
+            data.action = [nextDir.name, Direction.ACT.name].join(',');
         }
     }
 
@@ -220,51 +243,4 @@ exports.calc = function (data) {
 }
 
 
-/**
- *
- * @param {Board} board
- */
-function isAsideNotPerk(board) {
-    return (pt) => !DirectionList.some(dir => {
-        const next = dir.nextPoint(pt);
-        const el = board.gameState.getAt(next.x, next.y);
-        return el === Element.BOMB_BLAST_RADIUS_INCREASE || el === Element.BOMB_IMMUNE || el === Element.BOMB_COUNT_INCREASE || el === Element.BOMB_REMOTE_CONTROL;
-    });
-}
-function getNearestPerk(board, hero, last) {
-    const perks = board.getUsefulPerks().map(ch => ({
-        perk: ch,
-        path: getPaths(board, hero, ch)
-    })).filter(p => p.path && p.path.length && p.path[1])
-        .sort((a, b) => {
-            return a.path.length - b.path.length;
-        });
-
-    return perks[last ? perks.length - 1 : 0];
-}
-
-function getNearestPlayer(board, hero, last = false) {
-    var aliveCount = board.players.filter(p => p.alive).length;
-
-    const players = board.players.filter(p => p.alive).concat(aliveCount < 2 ? board.meatChoppers : []).map(ch => ({
-        player: ch,
-        path: getPaths(board, hero, ch)
-    })).filter(p => p.path && p.path.length && p.path[1])
-        .sort((a, b) => {
-            return a.path.length - b.path.length;
-        });
-
-    return players[last ? players.length - 1 : 0]
-}
-
-function getNearestChopper(board, hero, last = false) {
-    const choppers = board.meatChoppers.map(ch => ({
-        ch: ch,
-        path: getPaths(board, hero, ch)
-    })).filter(p => p.path && p.path.length && p.path[1]).sort((a, b) => {
-        return a.path.length - b.path.length;
-    });
-
-    return choppers[last ? choppers.length - 1 : 0];
-}
 

@@ -134,7 +134,7 @@ describe('score calc', function () {
             gameState: getBoard(bombBoard),
         })
 
-        assert.ok(res, 'UP');
+        assert.equal(res, 'UP');
     });
 
     it('should way bombs 2', function () {

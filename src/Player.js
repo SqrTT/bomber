@@ -11,6 +11,7 @@ class Player extends Point {
         this.alive = alive;
         this.immuneTime = 0;
         this.rcBombCount = 0;
+        this.afk = false;
     }
     equals(o) {
         return (this.alive && o.x === this.x && o.y === this.y);

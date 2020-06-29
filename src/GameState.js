@@ -3,7 +3,7 @@ const Point = require('./Point');
 const Player = require('./Player');
 const Bomb = require('./Bomb');
 const { GameStates } = require("./GameStates");
-const boardSymbol = Symbol('boardProperly');
+const boardSymbol = 'board';
 
 
 class GameState {

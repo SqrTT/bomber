@@ -1,5 +1,5 @@
 
-const { Element, isBomber, isWalkableElement, settings, DirectionList } = require('./Constants');
+const { Element, isBomber, isWalkableElement, settings, DirectionList, range } = require('./Constants');
 const Actor = require('./Actor');
 const Point = require('./Point');
 const Player = require('./Player');
@@ -65,6 +65,202 @@ class Board {
         return this.getElementsAroundPt(moveToPoint, elements, distance).length;
     }
 
+    /**
+     *
+     * @param {Point} bomb_point
+     * @param {number} blast
+     * @param {boolean} br
+     */
+    *blasts(bomb_point, blast = 4, br = true) {
+        for (const [search_range, is_x] of [
+            [range(bomb_point.x, bomb_point.x + blast), true],
+            [range(bomb_point.x, bomb_point.x - blast, -1), true],
+            [range(bomb_point.y, bomb_point.y + blast), false],
+            [range(bomb_point.y, bomb_point.y - blast, -1), false]
+        ]) {
+
+            for (const i of search_range) {
+                const [x, y] = is_x ? [i, bomb_point.y] : [bomb_point.x, i];
+                const el = this.getAt(x, y);
+
+                if (el === Element.WALL) {
+                    break
+                } else {
+
+                    if (x < 0 || y < 0) {
+                        debugger;
+                    }
+                    yield new Point(x, y);
+                    if (el == Element.DESTROYABLE_WALL && !(bomb_point.x === x && bomb_point.y === y)) {
+                        break
+                    }
+                    if ([Element.MEAT_CHOPPER, Element.OTHER_BOMBERMAN].includes(el) && (bomb_point.x != x || bomb_point.y != y) && br) {
+                        break
+                    }
+                }
+            }
+
+        }
+    }
+
+    nextHeroBombAvailable() {
+        const heroBomb = this.bombs.filter(b => b.owner === -1);
+
+        if (heroBomb.length === 0 || heroBomb.length > 1) {
+            return 0;
+        }
+        if (heroBomb.some(b => b.rc)) {
+            return 1;
+        }
+        return heroBomb.pop().timer + 1;
+    }
+
+
+    canSurvive(x, y, t, score) {
+        // """can I survive if I place bomb at (x, y) and time t"""
+        const [dist] = this.bfs(x, y, t, [new Bomb(-1, x, y)])
+        for (const i of range(0, this.size )) {
+            for (const j of range(0, this.size)) {
+                if (score[i][j] >= 0 && dist[i][j][6] < 100) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     *
+     * @param {number} startX
+     * @param {number} startY
+     * @param {number} startTime
+     * @param {Bomb[]} additional_bombs
+     */
+    bfs(startX, startY, startTime = 0, additional_bombs = []) {
+        // """shortest paths to each cell from (sx, sy) and time st"""
+        const n = this.size;
+        const self = this;
+
+        // dist = [[[1e9 for k in range(7)] for j in range(n)] for i in range(n)]
+        // par = [[[None for k in range(7)] for j in range(n)] for i in range(n)]
+        // penalty = [[[0 for k in range(7)] for j in range(n)] for i in range(n)]
+
+
+
+        const penalty = (new Array(this.size)).fill(0).map(
+            () => (new Array(this.size)).fill(0).map(() => new Array(7).fill(0)));
+
+        // # penalty for stepping on cells with different objects
+        for (const i of range(0, n)) {
+            for (const j of range(0, n)) {
+                const el = this.getAt(i, j);
+
+                if ([Element.WALL, Element.DESTROYABLE_WALL].includes(el)) {
+                    for (const k of range(0, 7)) {
+                        penalty[j][i][k] += 1e10;
+                    }
+                }
+                const bombAtEl = this.bombs.find(b => b.equalsTo(i, j));
+                if (bombAtEl) {
+                    const t = bombAtEl.rc ? 6 : Math.max(bombAtEl.timer - startTime, 0)
+                    for (const k of range(0, t + 1)) {
+                        penalty[j][i][k] += 1e10
+                    }
+
+                    //const [t, r] = self.get_bomb_info(i, j)
+                    const radius = bombAtEl.power + 1;
+
+                    const ps = this.blasts(new Point(j, i), radius)
+                    for (const p of ps) {
+                        if (bombAtEl.rc) {
+                            if (!self.bombs.some(b => b.equalsTo(i, j))) {
+                                for (const k of range(0, 7)) {
+                                    penalty[p.y][p.x][k] += 1e4
+                                }
+                            }
+                        } else {
+                            if (bombAtEl.timer - startTime < 0) {
+                                continue
+                            }
+                            penalty[p.y][p.x][bombAtEl.timer - startTime] += 1e10
+                        }
+                    }
+                    continue;
+                }
+
+                if (el == Element.OTHER_BOMBERMAN && Math.abs(i - startX) + Math.abs(j - startY) < 10) {
+                    for (const k of range(0, 7)) {
+                        if (k == 1 && startTime == 0) {
+                            penalty[j][i][k] += 1e5
+                        } else {
+                            penalty[j][i][k] += 1e3
+
+                        }
+                    }
+                    continue;
+                }
+
+                if (el == Element.MEAT_CHOPPER && Math.abs(i - startX) + Math.abs(j - startY) < 10) {
+                    for (const k of range(0, 7)) {
+                        if (k == 1 && startTime == 0) {
+                            penalty[j][i][k] += 1e10
+                        } else {
+                            penalty[j][i][k] += 1e6 + (7 - k) * 1e5
+                            penalty[j - 1][i][k] += 1e6 + (7 - k) * 1e5
+                            penalty[j + 1][i][k] += 1e6 + (7 - k) * 1e5
+                            penalty[j][i - 1][k] += 1e6 + (7 - k) * 1e5
+                            penalty[j][i + 1][k] += 1e6 + (7 - k) * 1e5
+                        }
+                    }
+                }
+            }
+        }
+
+
+        for (const bomb of additional_bombs) {
+            const t = Math.min(6, 4 + bomb.timer - startTime)
+            if (t < 0) {
+                continue
+            }
+            const ps = this.blasts(new Point(bomb.x, bomb.y), bomb.power + 1, false)
+            for (const p of ps) {
+                penalty[p.y][p.x][t] += 1e10
+            }
+        }
+
+        const par = (new Array(this.size)).fill(0).map(
+            () => (new Array(this.size)).fill(0).map(() => new Array(7).fill(null)));
+
+        const dist = (new Array(this.size)).fill(0).map(
+            () => (new Array(this.size)).fill(0).map(() => new Array(7).fill(1e9)));
+
+        dist[startY][startX][0] = 0
+        const Q = [[startY, startX, 0]];
+        let L = 0
+        const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1], [0, 0]];
+        while (L < Q.length) {
+            const [y, x, t] = Q[L];
+            // assert(dist[x][y][t] >= 0);
+            L += 1;
+            for (const dir of dirs) {
+                const xx = x + dir[0]
+                const yy = y + dir[1]
+                const tt = Math.min(t + 1, 6);
+
+                if ((yy >= 0 && yy < this.size && xx >= 0 && xx < this.size)
+                    && dist[yy][xx][tt] > dist[y][x][t] + 1 + penalty[yy][xx][tt]
+                ) {
+                    dist[yy][xx][tt] = dist[y][x][t] + 1 + penalty[yy][xx][tt]
+                    par[yy][xx][tt] = [y, x, t]
+                    Q.push([yy, xx, tt])
+                }
+            }
+        }
+
+        return [dist, par]
+    }
+
+
     getElementsAroundPt(moveToPoint, elements, distance = 1) {
         /**
          * @type {Point[]}
@@ -88,6 +284,22 @@ class Board {
             }
         }
         return elementsResult;
+    }
+
+    /**
+     *
+     * @param {Point} pos
+     */
+    canKillPerk(pos) {
+        // """does bomb at (x, y) kill any perk"""
+        const ps = this.blasts(pos, this.hero.bombsPower + 1);
+        for (const p of ps) {
+            if (p.equals(pos)) {
+                continue
+            }
+            return this.getUsefulPerks().some(perk => perk.equals(pos));
+        }
+        return false
     }
     getMeatChoppersAura() {
         const aura = this.meatChoppers.map(chopper => {
@@ -114,74 +326,82 @@ class Board {
         return this._barrierMatrix;
     }
 
-    rollAllDirections(fromPt, distance, cb) {
-        const matrix = this.getBarrierMatrix();
-        DirectionList.forEach(dir => {
-            var currentPoint = fromPt
-            for (var i = 0; i < distance; i++) {
-                currentPoint = dir.nextPoint(currentPoint);
-                if (!matrix[currentPoint.y][currentPoint.x]) {
-                    cb(currentPoint, i);
-                } else {
-                    return;
-                }
-            }
-        })
+    // rollAllDirections(fromPt, distance, cb) {
+    //     const matrix = this.getBarrierMatrix();
+
+    //     for (const dir of DirectionList) {
+    //         var currentPoint = fromPt
+    //         for (const point of range(0, distance)) {
+    //             currentPoint = dir.nextPoint(currentPoint);
+    //             if (!matrix[currentPoint.y][currentPoint.x]) {
+    //                 cb(currentPoint, point);
+    //             } else {
+    //                 return;
+    //             }
+    //         }
+    //     }
+    // }
+
+    canGo(pt) {
+        return [Element.BOMBERMAN, Element.NONE].includes(this.getAt(pt.x, pt.y));
     }
 
     getScoresBoard() {
         if (!this._scoresBoard) {
-            const bombPower = this.hero.bombsPower;
-            const scoresBoard = (new Array(this.size)).fill(0).map(
+            const score = (new Array(this.size)).fill(0).map(
                 () => (new Array(this.size)).fill(0));
 
-            this.destroyableWalls.forEach(wall => {
-                scoresBoard[wall.y][wall.x] += settings.killWallScore;
-                this.rollAllDirections(wall, bombPower, (pt) => {
-                    scoresBoard[pt.y][pt.x] += settings.killWallScore;
-                });
-            });
-
-            this.meatChoppers.forEach(wall => {
-                scoresBoard[wall.y][wall.x] += settings.killMeatChopperScore;
-                this.rollAllDirections(wall, bombPower, (pt, idx) => {
-                    scoresBoard[pt.y][pt.x] += settings.killMeatChopperScore;
-                });
-            });
-
-            this.players.forEach(player => {
-                if (player.alive) {
-                    const around = this.countElementsAroundPt(player, this.getBarriers()) || 1;
-                    const killScore = settings.killOtherHeroScore + (this.players.length === 1 ? settings.winRoundScore : 0) / around;
-
-                    scoresBoard[player.y][player.x] += killScore;
-                    this.rollAllDirections(player, bombPower, (pt) => {
-                        scoresBoard[pt.y][pt.x] += killScore;
-                    });
+            this.bombs.forEach(bomb => {
+                const ps = this.blasts(bomb, bomb.power + 1, false)
+                for (const p of ps) {
+                    score[p.y][p.x] = -1e9
                 }
             });
 
-            // this.getUsefulPerks().forEach(perk => {
-            //     scoresBoard[perk.y][perk.x] += settings.usePerkScore;
-            // });
+            this.getUsefulPerks().forEach(perk => {
+                if (score[perk.y][perk.x] > -1e8) {
+                    score[perk.y][perk.x] += 5;
+                }
+            })
 
-            // negative scores
-            // this.bombs.forEach(bomb => {
-            //     const bombScore = settings.diePenalty + 8 - (bomb.timer * 2);
-            //     scoresBoard[bomb.y][bomb.x] -= bombScore;
-            //     this.rollAllDirections(bomb, bomb.power, (pt, i) => {
-            //         scoresBoard[pt.y][pt.x] -= bombScore + bomb.power - i;
-            //     });
-            // });
+            this.destroyableWalls.forEach(wall => {
+                if (score[wall.y][wall.x] > -1e8) {
+                    const ps = this.blasts(wall, this.hero.bombsPower + 1, true);
+                    for (const p of ps) {
+                        if (this.canGo(p)) {
+                            score[p.y][p.x] += 1;
+                        }
+                    }
+                }
+            })
 
-            // this.meatChoppers.forEach(wall => {
-            //     scoresBoard[wall.y][wall.x] -= settings.diePenalty;
-            //     this.rollAllDirections(wall, 1, (pt, idx) => {
-            //         scoresBoard[pt.y][pt.x] -= settings.diePenalty;
-            //     });
-            // });
+            this.players.filter(p => p.alive && p.afk).forEach(player => {
+                if (score[player.y][player.x] > -1e8) {
+                    const ps = this.blasts(player, this.hero.bombsPower);
+                    for (const p of ps) {
+                        if (this.canGo(player)) {
+                            score[p.y][p.x] += 20
+                        }
+                    }
+                }
+            })
 
-            this._scoresBoard = scoresBoard;
+            for (const wall of this.walls) {
+                score[wall.y][wall.x] = -1e9
+            }
+            for (const wall of this.destroyableWalls) {
+                score[wall.y][wall.x] = -1e9
+            }
+            for (const ch of this.meatChoppers) {
+                score[ch.y][ch.x] = -1e9
+                score[ch.y - 1][ch.x] = -1e9
+                score[ch.y + 1][ch.x] = -1e9
+                score[ch.y][ch.x - 1] = -1e9
+                score[ch.y][ch.x + 1] = -1e9
+            }
+
+
+            this._scoresBoard = score;
         }
         return this._scoresBoard;
     }
@@ -210,39 +430,39 @@ class Board {
                 return (new Array(this.size)).fill(1);
             });
 
-            this.walls.forEach(bar => {
+            for (const bar of this.walls) {
                 walkMatrix[bar.y][bar.x] = 0;
-            });
+            };
 
             const someWall = this.walls.concat(this.destroyableWalls);
 
-            this.destroyableWalls.forEach(bar => {
+            for (const bar of this.destroyableWalls) {
                 walkMatrix[bar.y][bar.x] = 8;
-            });
+            };
 
-            this.meatChoppers.forEach(ch => {
+            for (const ch of this.meatChoppers) {
                 walkMatrix[ch.y][ch.x] = this.nearHero(ch) ? 0 : 20;
 
-                DirectionList.forEach(dir => {
+                for (const dir of DirectionList) {
                     const currentPoint = dir.nextPoint(ch);
                     if (!someWall.some(w => w.equals(currentPoint))) {
                         walkMatrix[currentPoint.y][currentPoint.x] = this.nearHero(ch) ? 0 : 6;
                     }
-                })
-            });
+                }
+            };
 
-            this.players.forEach(player => {
+            for (const player of this.players) {
                 walkMatrix[player.y][player.x] = 100;
-            });
+            };
 
-            this.bombs.forEach(bomb => {
+            for (const bomb of this.bombs) {
                 const bombTime = bomb.timer === 5 ? 5 : Math.max(bomb.timer - step, 0);
 
                 if (bombTime) {
                     walkMatrix[bomb.y][bomb.x] = 0;
 
                     if ((this.hero.immuneTime - step) < 4) {
-                        DirectionList.forEach(dir => {
+                        for (const dir of DirectionList) {
                             var currentPoint = dir.nextPoint(bomb);
 
                             for (var d = 1; d <= bomb.power; d++) {
@@ -256,21 +476,21 @@ class Board {
                                 } else if (bombTime === 1) {
                                     walkMatrix[currentPoint.y][currentPoint.x] = 0;
                                 }
-                                DirectionList.forEach(dir => {
-                                    const wall = dir.nextPoint(currentPoint);
+                                for (const dirIn of DirectionList) {
+                                    const wall = dirIn.nextPoint(currentPoint);
                                     if (
                                         this.destroyableWalls.some(w => w.equals(wall)) ||
                                         this.players.some(b => b.equals(wall))
                                     ) {
                                         walkMatrix[wall.y][wall.x] = 0;
                                     }
-                                })
+                                }
                                 currentPoint = dir.nextPoint(currentPoint);
                             }
-                        })
+                        }
                     }
                 }
-            });
+            };
             walkMatrix[this.hero.y][this.hero.x] = 1;
             this._walkMatrix.set(step, walkMatrix);
         }
@@ -281,8 +501,7 @@ class Board {
     getFutureBlasts(time = 1) {
         var bombs = this.bombs;
         var result = [];
-        for (var index in bombs) {
-            var bomb = bombs[index];
+        for (const bomb of bombs) {
             result.push(bomb);
 
             var aroundIdx = around.length;
@@ -318,12 +537,30 @@ class Board {
         }
         return result2;
     };
+
+    getBoardPos(x, y) {
+        return y * this.size + x;
+    }
+
+    /**
+     *
+     * @param {number} x
+     * @param {number} y
+     */
+    getAt(x, y) {
+        return this.board.charAt(this.getBoardPos(x, y));
+    };
+
     constructor(/** @type {GameState}  */gameState, oldBoard) {
         if (oldBoard) {
             this.size = oldBoard.size;
             this.rows = oldBoard.rows;
         } else {
-            this.gameState = gameState;
+            /**
+             * @type {string}
+             */
+            this.board = gameState.board;
+            ///this.gameState = gameState;
             this._walkMatrix = new Map();
             this.size = gameState.size;
             this.walls = gameState.walls.map(copyAsIs);
@@ -362,6 +599,10 @@ class Board {
         return newBoard;
 
     }
+
+    /**
+     * @returns {Point[]}
+     */
     getUsefulPerks() {
         return this.perks[Element.BOMB_BLAST_RADIUS_INCREASE]
             .concat(
